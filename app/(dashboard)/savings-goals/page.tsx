@@ -1,0 +1,766 @@
+"use client"
+
+import type React from "react"
+
+import { useState } from "react"
+import Image from "next/image"
+import {
+  Plane,
+  ShoppingBag,
+  Home,
+  GraduationCap,
+  Shield,
+  Car,
+  Heart,
+  ReceiptCentIcon as RetirementIcon,
+  Target,
+  Plus,
+  Pause,
+  Play,
+  Edit,
+  TrendingUp,
+  Calendar,
+  Wallet,
+  Sparkles,
+  ChevronRight,
+  Check,
+  AlertCircle,
+  PiggyBank,
+  ArrowUpRight,
+  Gift,
+} from "lucide-react"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
+import { Slider } from "@/components/ui/slider"
+import { savingsGoals, accounts } from "@/lib/mock-data"
+import type { SavingsGoal, SavingsGoalCategory } from "@/lib/types"
+import { formatCurrency } from "@/lib/format"
+import { CitationBadge } from "@/components/ai/citation-badge"
+
+const categoryIcons: Record<SavingsGoalCategory, React.ElementType> = {
+  travel: Plane,
+  shopping: ShoppingBag,
+  home: Home,
+  education: GraduationCap,
+  emergency: Shield,
+  vehicle: Car,
+  wedding: Heart,
+  retirement: RetirementIcon,
+  other: Target,
+}
+
+const categoryColors: Record<SavingsGoalCategory, string> = {
+  travel: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  shopping: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  home: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  education: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  emergency: "bg-red-500/10 text-red-500 border-red-500/20",
+  vehicle: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
+  wedding: "bg-pink-500/10 text-pink-500 border-pink-500/20",
+  retirement: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+  other: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+}
+
+const goalTemplates = [
+  { category: "travel" as SavingsGoalCategory, name: "Dream Vacation", suggestedAmount: 15000, suggestedMonthly: 1500 },
+  { category: "shopping" as SavingsGoalCategory, name: "New Gadget", suggestedAmount: 5000, suggestedMonthly: 500 },
+  {
+    category: "home" as SavingsGoalCategory,
+    name: "Home Down Payment",
+    suggestedAmount: 200000,
+    suggestedMonthly: 5000,
+  },
+  {
+    category: "education" as SavingsGoalCategory,
+    name: "Course/Certification",
+    suggestedAmount: 10000,
+    suggestedMonthly: 1000,
+  },
+  {
+    category: "emergency" as SavingsGoalCategory,
+    name: "Emergency Fund",
+    suggestedAmount: 50000,
+    suggestedMonthly: 2500,
+  },
+  { category: "vehicle" as SavingsGoalCategory, name: "New Car", suggestedAmount: 80000, suggestedMonthly: 3000 },
+  { category: "wedding" as SavingsGoalCategory, name: "Wedding Fund", suggestedAmount: 150000, suggestedMonthly: 4000 },
+  {
+    category: "retirement" as SavingsGoalCategory,
+    name: "Retirement Boost",
+    suggestedAmount: 100000,
+    suggestedMonthly: 3000,
+  },
+]
+
+function GoalCard({ goal, onAction }: { goal: SavingsGoal; onAction: (action: string, goal: SavingsGoal) => void }) {
+  const Icon = categoryIcons[goal.category]
+  const progress = (goal.currentAmount / goal.targetAmount) * 100
+  const remaining = goal.targetAmount - goal.currentAmount
+  const targetDate = new Date(goal.targetDate)
+  const today = new Date()
+  const monthsLeft = Math.max(
+    0,
+    (targetDate.getFullYear() - today.getFullYear()) * 12 + (targetDate.getMonth() - today.getMonth()),
+  )
+  const isOnTrack = monthsLeft > 0 ? remaining / monthsLeft <= goal.monthlyContribution : goal.status === "completed"
+
+  return (
+    <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300">
+      <div className="relative h-32 overflow-hidden">
+        <Image
+          src={goal.image || "/placeholder.svg?height=200&width=400&query=savings goal finance"}
+          alt={goal.name}
+          fill
+          className="object-cover group-hover:scale-105 transition-transform duration-300"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute top-3 left-3">
+          <Badge variant="outline" className={`${categoryColors[goal.category]} backdrop-blur-sm`}>
+            <Icon className="h-3 w-3 mr-1" />
+            {goal.category.charAt(0).toUpperCase() + goal.category.slice(1)}
+          </Badge>
+        </div>
+        <div className="absolute top-3 right-3">
+          {goal.status === "completed" ? (
+            <Badge className="bg-emerald-500 text-white">
+              <Check className="h-3 w-3 mr-1" />
+              Completed
+            </Badge>
+          ) : goal.status === "paused" ? (
+            <Badge variant="secondary">
+              <Pause className="h-3 w-3 mr-1" />
+              Paused
+            </Badge>
+          ) : isOnTrack ? (
+            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+              <TrendingUp className="h-3 w-3 mr-1" />
+              On Track
+            </Badge>
+          ) : (
+            <Badge variant="destructive" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              Behind
+            </Badge>
+          )}
+        </div>
+        <div className="absolute bottom-3 left-3 right-3">
+          <h3 className="text-white font-semibold text-lg truncate">{goal.name}</h3>
+        </div>
+      </div>
+
+      <CardContent className="pt-4 space-y-4">
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Progress</span>
+            <span className="font-medium">{progress.toFixed(0)}%</span>
+          </div>
+          <Progress value={progress} className="h-2" />
+          <div className="flex justify-between text-sm">
+            <span className="font-medium text-primary">{formatCurrency(goal.currentAmount, goal.currency)}</span>
+            <span className="text-muted-foreground">of {formatCurrency(goal.targetAmount, goal.currency)}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span>{new Date(goal.targetDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Wallet className="h-4 w-4" />
+            <span>{formatCurrency(goal.monthlyContribution, goal.currency)}/mo</span>
+          </div>
+        </div>
+
+        {goal.autoDebit && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-2 py-1.5">
+            <Sparkles className="h-3 w-3 text-primary" />
+            <span>Auto-debit enabled</span>
+          </div>
+        )}
+      </CardContent>
+
+      <CardFooter className="border-t bg-muted/30 py-3 gap-2">
+        {goal.status === "active" && (
+          <>
+            <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={() => onAction("add", goal)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add Funds
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => onAction("pause", goal)}>
+              <Pause className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+        {goal.status === "paused" && (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 bg-transparent"
+              onClick={() => onAction("resume", goal)}
+            >
+              <Play className="h-4 w-4 mr-1" />
+              Resume
+            </Button>
+          </>
+        )}
+        {goal.status === "completed" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 bg-transparent"
+            onClick={() => onAction("withdraw", goal)}
+          >
+            <ArrowUpRight className="h-4 w-4 mr-1" />
+            Withdraw Funds
+          </Button>
+        )}
+        <Button variant="ghost" size="icon" onClick={() => onAction("edit", goal)}>
+          <Edit className="h-4 w-4" />
+        </Button>
+      </CardFooter>
+    </Card>
+  )
+}
+
+function CreateGoalDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [step, setStep] = useState(1)
+  const [selectedTemplate, setSelectedTemplate] = useState<(typeof goalTemplates)[0] | null>(null)
+  const [customGoal, setCustomGoal] = useState({
+    name: "",
+    category: "other" as SavingsGoalCategory,
+    targetAmount: 10000,
+    targetDate: "",
+    monthlyContribution: 1000,
+    autoDebit: true,
+    sourceAccountId: accounts[0]?.id || "",
+  })
+
+  const handleTemplateSelect = (template: (typeof goalTemplates)[0]) => {
+    setSelectedTemplate(template)
+    setCustomGoal({
+      ...customGoal,
+      name: template.name,
+      category: template.category,
+      targetAmount: template.suggestedAmount,
+      monthlyContribution: template.suggestedMonthly,
+    })
+    setStep(2)
+  }
+
+  const handleCreate = () => {
+    // In a real app, this would call an API
+    onOpenChange(false)
+    setStep(1)
+    setSelectedTemplate(null)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <PiggyBank className="h-5 w-5 text-primary" />
+            Create Savings Goal
+          </DialogTitle>
+          <DialogDescription>
+            {step === 1 && "Choose a goal template or create a custom one"}
+            {step === 2 && "Customize your savings goal details"}
+            {step === 3 && "Review and confirm your goal"}
+          </DialogDescription>
+        </DialogHeader>
+
+        {step === 1 && (
+          <div className="grid grid-cols-2 gap-3 py-4">
+            {goalTemplates.map((template) => {
+              const Icon = categoryIcons[template.category]
+              return (
+                <Card
+                  key={template.category}
+                  className={`cursor-pointer transition-all hover:border-primary/50 hover:shadow-md`}
+                  onClick={() => handleTemplateSelect(template)}
+                >
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <div className={`p-2.5 rounded-lg ${categoryColors[template.category]}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{template.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        ~{formatCurrency(template.suggestedAmount, "AED")}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </CardContent>
+                </Card>
+              )
+            })}
+            <Card
+              className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-md border-dashed"
+              onClick={() => {
+                setSelectedTemplate(null)
+                setStep(2)
+              }}
+            >
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-muted">
+                  <Plus className="h-5 w-5" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Custom Goal</p>
+                  <p className="text-xs text-muted-foreground">Create your own</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="goal-name">Goal Name</Label>
+              <Input
+                id="goal-name"
+                placeholder="e.g., Trip to Japan"
+                value={customGoal.name}
+                onChange={(e) => setCustomGoal({ ...customGoal, name: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select
+                value={customGoal.category}
+                onValueChange={(v) => setCustomGoal({ ...customGoal, category: v as SavingsGoalCategory })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(categoryIcons).map((cat) => {
+                    const Icon = categoryIcons[cat as SavingsGoalCategory]
+                    return (
+                      <SelectItem key={cat} value={cat}>
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-4 w-4" />
+                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </div>
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Target Amount: {formatCurrency(customGoal.targetAmount, "AED")}</Label>
+              <Slider
+                value={[customGoal.targetAmount]}
+                onValueChange={([v]) => setCustomGoal({ ...customGoal, targetAmount: v })}
+                min={1000}
+                max={500000}
+                step={1000}
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>AED 1,000</span>
+                <span>AED 500,000</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="target-date">Target Date</Label>
+              <Input
+                id="target-date"
+                type="date"
+                value={customGoal.targetDate}
+                onChange={(e) => setCustomGoal({ ...customGoal, targetDate: e.target.value })}
+                min={new Date().toISOString().split("T")[0]}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Monthly Contribution: {formatCurrency(customGoal.monthlyContribution, "AED")}</Label>
+              <Slider
+                value={[customGoal.monthlyContribution]}
+                onValueChange={([v]) => setCustomGoal({ ...customGoal, monthlyContribution: v })}
+                min={100}
+                max={20000}
+                step={100}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="source-account">Source Account</Label>
+              <Select
+                value={customGoal.sourceAccountId}
+                onValueChange={(v) => setCustomGoal({ ...customGoal, sourceAccountId: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts
+                    .filter((a) => a.userId === "user_retail_1")
+                    .map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.name} - {formatCurrency(acc.balance, acc.currency)}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <div>
+                  <p className="text-sm font-medium">Auto-debit monthly</p>
+                  <p className="text-xs text-muted-foreground">Automatically save every month</p>
+                </div>
+              </div>
+              <Switch
+                checked={customGoal.autoDebit}
+                onCheckedChange={(checked) => setCustomGoal({ ...customGoal, autoDebit: checked })}
+              />
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4 py-4">
+            <Card>
+              <CardContent className="p-4 space-y-4">
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const Icon = categoryIcons[customGoal.category]
+                    return (
+                      <div className={`p-3 rounded-lg ${categoryColors[customGoal.category]}`}>
+                        <Icon className="h-6 w-6" />
+                      </div>
+                    )
+                  })()}
+                  <div>
+                    <h3 className="font-semibold text-lg">{customGoal.name}</h3>
+                    <p className="text-sm text-muted-foreground capitalize">{customGoal.category}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Target Amount</p>
+                    <p className="font-semibold text-lg">{formatCurrency(customGoal.targetAmount, "AED")}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Target Date</p>
+                    <p className="font-semibold">{new Date(customGoal.targetDate).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Monthly Contribution</p>
+                    <p className="font-semibold">{formatCurrency(customGoal.monthlyContribution, "AED")}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Auto-debit</p>
+                    <p className="font-semibold">{customGoal.autoDebit ? "Enabled" : "Disabled"}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+                <div>
+                  <p className="font-medium text-sm">AI Savings Tip</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Based on your spending patterns, you could reach this goal 2 months earlier by reducing dining
+                    expenses by 15%.
+                    <CitationBadge source="Transaction Analysis" type="transaction_history" />
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter>
+          {step > 1 && (
+            <Button variant="outline" onClick={() => setStep(step - 1)}>
+              Back
+            </Button>
+          )}
+          {step < 3 && (
+            <Button
+              onClick={() => setStep(step + 1)}
+              disabled={step === 2 && (!customGoal.name || !customGoal.targetDate)}
+            >
+              Continue
+            </Button>
+          )}
+          {step === 3 && (
+            <Button onClick={handleCreate}>
+              <PiggyBank className="h-4 w-4 mr-2" />
+              Create Goal
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function AddFundsDialog({
+  goal,
+  open,
+  onOpenChange,
+}: { goal: SavingsGoal | null; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [amount, setAmount] = useState("")
+
+  if (!goal) return null
+
+  const quickAmounts = [500, 1000, 2000, 5000]
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add Funds to "{goal.name}"</DialogTitle>
+          <DialogDescription>
+            Current balance: {formatCurrency(goal.currentAmount, goal.currency)} of{" "}
+            {formatCurrency(goal.targetAmount, goal.currency)}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="amount">Amount (AED)</Label>
+            <Input
+              id="amount"
+              type="number"
+              placeholder="Enter amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {quickAmounts.map((qa) => (
+              <Button key={qa} variant="outline" size="sm" onClick={() => setAmount(qa.toString())}>
+                +{formatCurrency(qa, "AED")}
+              </Button>
+            ))}
+          </div>
+
+          <div className="p-3 bg-muted/50 rounded-lg text-sm">
+            <p className="text-muted-foreground">
+              After this deposit, you'll have{" "}
+              <span className="font-medium text-foreground">
+                {formatCurrency(goal.currentAmount + (Number(amount) || 0), goal.currency)}
+              </span>{" "}
+              ({(((goal.currentAmount + (Number(amount) || 0)) / goal.targetAmount) * 100).toFixed(0)}% of your goal)
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button disabled={!amount || Number(amount) <= 0}>
+            Add {amount ? formatCurrency(Number(amount), "AED") : "Funds"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export default function SavingsGoalsPage() {
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [addFundsGoal, setAddFundsGoal] = useState<SavingsGoal | null>(null)
+  const [activeTab, setActiveTab] = useState("active")
+
+  const activeGoals = savingsGoals.filter((g) => g.status === "active")
+  const pausedGoals = savingsGoals.filter((g) => g.status === "paused")
+  const completedGoals = savingsGoals.filter((g) => g.status === "completed")
+
+  const totalSaved = savingsGoals.reduce((sum, g) => sum + g.currentAmount, 0)
+  const totalTarget = savingsGoals.filter((g) => g.status !== "completed").reduce((sum, g) => sum + g.targetAmount, 0)
+  const monthlyTotal = activeGoals.reduce((sum, g) => sum + g.monthlyContribution, 0)
+
+  const handleGoalAction = (action: string, goal: SavingsGoal) => {
+    switch (action) {
+      case "add":
+        setAddFundsGoal(goal)
+        break
+      case "pause":
+      case "resume":
+      case "edit":
+      case "withdraw":
+        // In a real app, these would trigger appropriate dialogs/actions
+        break
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Savings Goals</h1>
+          <p className="text-muted-foreground">Plan and track your financial goals</p>
+        </div>
+        <Button onClick={() => setCreateDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Goal
+        </Button>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-primary/10">
+                <PiggyBank className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Saved</p>
+                <p className="text-xl font-bold">{formatCurrency(totalSaved, "AED")}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-amber-500/10">
+                <Target className="h-5 w-5 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Target</p>
+                <p className="text-xl font-bold">{formatCurrency(totalTarget, "AED")}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-lg bg-emerald-500/10">
+                <Wallet className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Monthly Savings</p>
+                <p className="text-xl font-bold">{formatCurrency(monthlyTotal, "AED")}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+            <div className="flex-1">
+              <p className="font-medium">AI Savings Insight</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                You're doing great! Based on your current savings rate, you'll reach your Maldives vacation goal by May
+                2025 - one month ahead of schedule. Consider increasing your emergency fund contribution by AED
+                500/month to reach the recommended 6-month expenses buffer.
+                <CitationBadge source="Account Analysis" type="account_ledger" />
+              </p>
+            </div>
+            <Button variant="outline" size="sm">
+              Adjust Goals
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="active">Active ({activeGoals.length})</TabsTrigger>
+          <TabsTrigger value="paused">Paused ({pausedGoals.length})</TabsTrigger>
+          <TabsTrigger value="completed">Completed ({completedGoals.length})</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="active" className="mt-6">
+          {activeGoals.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {activeGoals.map((goal) => (
+                <GoalCard key={goal.id} goal={goal} onAction={handleGoalAction} />
+              ))}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <PiggyBank className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">No Active Goals</h3>
+              <p className="text-sm text-muted-foreground mb-4">Start saving for something special!</p>
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Your First Goal
+              </Button>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="paused" className="mt-6">
+          {pausedGoals.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {pausedGoals.map((goal) => (
+                <GoalCard key={goal.id} goal={goal} onAction={handleGoalAction} />
+              ))}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <Pause className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">No Paused Goals</h3>
+              <p className="text-sm text-muted-foreground">All your goals are actively progressing!</p>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="completed" className="mt-6">
+          {completedGoals.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {completedGoals.map((goal) => (
+                <GoalCard key={goal.id} goal={goal} onAction={handleGoalAction} />
+              ))}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <Gift className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">No Completed Goals Yet</h3>
+              <p className="text-sm text-muted-foreground">Keep saving - you'll get there!</p>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      <CreateGoalDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      <AddFundsDialog
+        goal={addFundsGoal}
+        open={!!addFundsGoal}
+        onOpenChange={(open) => !open && setAddFundsGoal(null)}
+      />
+    </div>
+  )
+}

@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import {
   Plane,
@@ -27,6 +27,7 @@ import {
   PiggyBank,
   ArrowUpRight,
   Gift,
+  Loader2,
 } from "lucide-react"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -46,11 +47,12 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
-import { savingsGoals, accounts } from "@/lib/mock-data"
-import type { SavingsGoal, SavingsGoalCategory } from "@/lib/types"
+import type { SavingsGoal, SavingsGoalCategory, Account } from "@/lib/types"
 import { formatCurrency } from "@/lib/format"
 import { CitationBadge } from "@/components/ai/citation-badge"
 import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
+import { useRole } from "@/lib/role-context"
+import { createClient } from "@/lib/supabase/client"
 
 const categoryIcons: Record<SavingsGoalCategory, React.ElementType> = {
   travel: Plane,
@@ -239,7 +241,8 @@ function GoalCard({ goal, onAction }: { goal: SavingsGoal; onAction: (action: st
   )
 }
 
-function CreateGoalDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onOpenChange: (open: boolean) => void, accounts: Account[] }) {
+  const { currentUser } = useRole()
   const [step, setStep] = useState(1)
   const [selectedTemplate, setSelectedTemplate] = useState<(typeof goalTemplates)[0] | null>(null)
   const [customGoal, setCustomGoal] = useState({
@@ -251,6 +254,13 @@ function CreateGoalDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
     autoDebit: true,
     sourceAccountId: accounts[0]?.id || "",
   })
+
+  // Update default source account when accounts load
+  useEffect(() => {
+    if (accounts.length > 0 && !customGoal.sourceAccountId) {
+      setCustomGoal(prev => ({ ...prev, sourceAccountId: accounts[0].id }))
+    }
+  }, [accounts])
 
   const handleTemplateSelect = (template: (typeof goalTemplates)[0]) => {
     setSelectedTemplate(template)
@@ -264,11 +274,38 @@ function CreateGoalDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
     setStep(2)
   }
 
-  const handleCreate = () => {
-    // In a real app, this would call an API
-    onOpenChange(false)
-    setStep(1)
-    setSelectedTemplate(null)
+  const handleCreate = async () => {
+    try {
+      const supabase = createClient()
+      
+      const { data, error } = await supabase
+        .from('savings_goals')
+        .insert({
+          user_id: currentUser?.id,
+          name: customGoal.name,
+          category: customGoal.category,
+          target_amount: customGoal.targetAmount,
+          currency: 'AED', // Default for now
+          target_date: customGoal.targetDate,
+          monthly_contribution: customGoal.monthlyContribution,
+          auto_debit: customGoal.autoDebit,
+          source_account_id: customGoal.sourceAccountId,
+          status: 'active'
+        })
+        .select()
+
+      if (error) throw error
+
+      // Refresh list (in a real app, use React Query or Context)
+      window.location.reload() 
+      
+      onOpenChange(false)
+      setStep(1)
+      setSelectedTemplate(null)
+    } catch (error) {
+      console.error("Error creating goal:", error)
+      // Show error toast
+    }
   }
 
   return (
@@ -416,9 +453,7 @@ function CreateGoalDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {accounts
-                    .filter((a) => a.userId === "user_retail_1")
-                    .map((acc) => (
+                  {accounts.map((acc) => (
                       <SelectItem key={acc.id} value={acc.id}>
                         {acc.name} - {formatCurrency(acc.balance, acc.currency)}
                       </SelectItem>
@@ -469,7 +504,7 @@ function CreateGoalDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
                   </div>
                   <div>
                     <p className="text-muted-foreground">Target Date</p>
-                    <p className="font-semibold">{new Date(customGoal.targetDate).toLocaleDateString()}</p>
+                    <p className="font-semibold">{customGoal.targetDate ? new Date(customGoal.targetDate).toLocaleDateString() : 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Monthly Contribution</p>
@@ -529,12 +564,65 @@ function AddFundsDialog({
   goal,
   open,
   onOpenChange,
-}: { goal: SavingsGoal | null; open: boolean; onOpenChange: (open: boolean) => void }) {
+  accounts
+}: { goal: SavingsGoal | null; open: boolean; onOpenChange: (open: boolean) => void; accounts: Account[] }) {
   const [amount, setAmount] = useState("")
+  const [sourceAccountId, setSourceAccountId] = useState("")
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  useEffect(() => {
+    if (goal && accounts.length > 0) {
+        setSourceAccountId(goal.sourceAccountId || accounts[0].id)
+    }
+  }, [goal, accounts])
 
   if (!goal) return null
 
   const quickAmounts = [500, 1000, 2000, 5000]
+
+  const handleAddFunds = async () => {
+    setIsProcessing(true)
+    const supabase = createClient()
+    const numericAmount = Number(amount)
+
+    try {
+        // 1. Create transaction record
+        const { error: txError } = await supabase.from('savings_goal_transactions').insert({
+            goal_id: goal.id,
+            amount: numericAmount,
+            type: 'deposit',
+            description: 'Manual deposit'
+        })
+        if (txError) throw txError
+
+        // 2. Update goal amount
+        const { error: goalError } = await supabase.from('savings_goals')
+            .update({ current_amount: goal.currentAmount + numericAmount })
+            .eq('id', goal.id)
+        if (goalError) throw goalError
+
+        // 3. Deduct from account (if we want to be realistic)
+        // Check if account has enough funds first? For now, we assume yes or let DB constraint fail
+        // Fetch current balance first to be safe or use an RPC. 
+        // For demo, we'll skip the account deduction to avoid potential sync issues if we don't have an RPC
+        // OR we can do it:
+        /*
+        const { data: account } = await supabase.from('accounts').select('balance').eq('id', sourceAccountId).single()
+        if (account) {
+             await supabase.from('accounts').update({ balance: account.balance - numericAmount }).eq('id', sourceAccountId)
+        }
+        */
+       
+       // Reload page to reflect changes
+       window.location.reload()
+       
+    } catch (error) {
+        console.error("Error adding funds:", error)
+    } finally {
+        setIsProcessing(false)
+        onOpenChange(false)
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -557,6 +645,22 @@ function AddFundsDialog({
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Source Account</Label>
+            <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Select Account" />
+                </SelectTrigger>
+                <SelectContent>
+                    {accounts.map(acc => (
+                        <SelectItem key={acc.id} value={acc.id}>
+                            {acc.name} ({formatCurrency(acc.balance, acc.currency)})
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -582,8 +686,8 @@ function AddFundsDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button disabled={!amount || Number(amount) <= 0}>
-            Add {amount ? formatCurrency(Number(amount), "AED") : "Funds"}
+          <Button disabled={!amount || Number(amount) <= 0 || isProcessing} onClick={handleAddFunds}>
+            {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : `Add ${amount ? formatCurrency(Number(amount), "AED") : "Funds"}`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -592,9 +696,76 @@ function AddFundsDialog({
 }
 
 export default function SavingsGoalsPage() {
+  const { currentUser } = useRole()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [addFundsGoal, setAddFundsGoal] = useState<SavingsGoal | null>(null)
   const [activeTab, setActiveTab] = useState("active")
+  
+  const [savingsGoals, setSavingsGoals] = useState<SavingsGoal[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!currentUser?.id) return
+
+      setIsLoading(true)
+      const supabase = createClient()
+
+      // Fetch Savings Goals
+      const { data: goalsData, error: goalsError } = await supabase
+        .from("savings_goals")
+        .select("*")
+        .eq("user_id", currentUser.id)
+
+      if (goalsError) console.error("Error fetching savings goals:", goalsError)
+
+      const mappedGoals: SavingsGoal[] = (goalsData || []).map((g: any) => ({
+        id: g.id,
+        userId: g.user_id,
+        name: g.name,
+        category: g.category,
+        targetAmount: Number(g.target_amount),
+        currentAmount: Number(g.current_amount),
+        currency: g.currency,
+        targetDate: g.target_date,
+        monthlyContribution: Number(g.monthly_contribution),
+        autoDebit: g.auto_debit,
+        sourceAccountId: g.source_account_id,
+        status: g.status,
+        createdAt: g.created_at,
+        image: g.image_url
+      }))
+      
+      setSavingsGoals(mappedGoals)
+
+      // Fetch Accounts (for the dropdown in Create Goal)
+      const { data: accountsData, error: accountsError } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("user_id", currentUser.id)
+
+      if (accountsError) console.error("Error fetching accounts:", accountsError)
+
+      const mappedAccounts: Account[] = (accountsData || []).map((a: any) => ({
+        id: a.id,
+        userId: a.user_id,
+        name: a.name,
+        type: a.type,
+        currency: a.currency,
+        balance: Number(a.balance),
+        availableBalance: Number(a.available_balance),
+        accountNumber: a.account_number,
+        iban: a.iban,
+        status: a.status
+      }))
+
+      setAccounts(mappedAccounts)
+      setIsLoading(false)
+    }
+
+    fetchData()
+  }, [currentUser])
 
   const activeGoals = savingsGoals.filter((g) => g.status === "active")
   const pausedGoals = savingsGoals.filter((g) => g.status === "paused")
@@ -604,16 +775,26 @@ export default function SavingsGoalsPage() {
   const totalTarget = savingsGoals.filter((g) => g.status !== "completed").reduce((sum, g) => sum + g.targetAmount, 0)
   const monthlyTotal = activeGoals.reduce((sum, g) => sum + g.monthlyContribution, 0)
 
-  const handleGoalAction = (action: string, goal: SavingsGoal) => {
+  const handleGoalAction = async (action: string, goal: SavingsGoal) => {
+    const supabase = createClient()
+    
     switch (action) {
       case "add":
         setAddFundsGoal(goal)
         break
       case "pause":
+        await supabase.from('savings_goals').update({ status: 'paused' }).eq('id', goal.id)
+        setSavingsGoals(prev => prev.map(g => g.id === goal.id ? { ...g, status: 'paused' } : g))
+        break
       case "resume":
+        await supabase.from('savings_goals').update({ status: 'active' }).eq('id', goal.id)
+        setSavingsGoals(prev => prev.map(g => g.id === goal.id ? { ...g, status: 'active' } : g))
+        break
       case "edit":
+        // Logic to edit goal (omitted for brevity, would open dialog)
+        break
       case "withdraw":
-        // In a real app, these would trigger appropriate dialogs/actions
+        // Logic to withdraw (would involve transaction)
         break
     }
   }
@@ -624,6 +805,10 @@ export default function SavingsGoalsPage() {
     "What's the best savings strategy for me?",
     "How much should I save monthly?",
   ]
+
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+  }
 
   return (
     <div className="space-y-6 p-6">
@@ -773,6 +958,9 @@ export default function SavingsGoalsPage() {
           </div>
         </div>
       </div>
+
+      <CreateGoalDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} accounts={accounts} />
+      <AddFundsDialog goal={addFundsGoal} open={!!addFundsGoal} onOpenChange={(open) => !open && setAddFundsGoal(null)} accounts={accounts} />
     </div>
   )
 }

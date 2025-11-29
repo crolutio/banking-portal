@@ -67,7 +67,7 @@ const typeIcons: Record<string, React.ElementType> = {
 }
 
 export default function RiskCompliancePage() {
-  const { role } = useRole()
+  const { currentRole } = useRole()
   const [selectedAlert, setSelectedAlert] = useState<RiskAlert | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [severityFilter, setSeverityFilter] = useState<string>("all")
@@ -75,7 +75,7 @@ export default function RiskCompliancePage() {
   const [decisionDialog, setDecisionDialog] = useState(false)
 
   // Check if user has access
-  if (role !== "risk_compliance" && role !== "admin") {
+  if (currentRole !== "risk_compliance" && currentRole !== "admin") {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Card className="max-w-md">

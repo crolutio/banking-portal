@@ -137,7 +137,7 @@ const upcomingMeetings = [
 ]
 
 export default function RMWorkspacePage() {
-  const { role } = useRole()
+  const { currentRole } = useRole()
   const [selectedClient, setSelectedClient] = useState<(typeof users)[0] | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [segmentFilter, setSegmentFilter] = useState<string>("all")
@@ -164,7 +164,7 @@ export default function RMWorkspacePage() {
   const getClientInteractions = (userId: string) => clientInteractions.filter((i) => i.clientId === userId)
 
   // Check if user has RM role
-  if (role !== "relationship_manager") {
+  if (currentRole !== "relationship_manager") {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Card className="max-w-md">

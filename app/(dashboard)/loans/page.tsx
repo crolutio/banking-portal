@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,7 +25,7 @@ import {
 import { StatCard } from "@/components/ui/stat-card"
 import { CitationBadge, ConfidenceIndicator } from "@/components/ai/citation-badge"
 import { formatCurrency } from "@/lib/format"
-import { loans, loanOffers, policies } from "@/lib/mock-data"
+import { policies } from "@/lib/mock-data"
 import {
   Wallet,
   TrendingUp,
@@ -44,8 +44,12 @@ import {
   Upload,
   ChevronRight,
   Info,
+  Loader2,
 } from "lucide-react"
 import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
+import { useRole } from "@/lib/role-context"
+import { createClient } from "@/lib/supabase/client"
+import type { Loan, LoanOffer } from "@/lib/types"
 
 const loanTypeIcons: Record<string, React.ElementType> = {
   personal: Wallet,
@@ -56,13 +60,75 @@ const loanTypeIcons: Record<string, React.ElementType> = {
 }
 
 export default function LoansPage() {
-  const [selectedOffer, setSelectedOffer] = useState<(typeof loanOffers)[0] | null>(null)
+  const { currentUser } = useRole()
+  const [activeTab, setActiveTab] = useState("my-loans")
+  const [selectedOffer, setSelectedOffer] = useState<LoanOffer | null>(null)
   const [simulatorAmount, setSimulatorAmount] = useState(50000)
   const [simulatorTerm, setSimulatorTerm] = useState(24)
   const [applicationStep, setApplicationStep] = useState(1)
+  
+  const [userLoans, setUserLoans] = useState<Loan[]>([])
+  const [loanOffers, setLoanOffers] = useState<LoanOffer[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Filter loans for current user (mock)
-  const userLoans = loans.filter((loan) => loan.userId === "user_retail_1")
+  useEffect(() => {
+    async function fetchData() {
+      if (!currentUser?.id) return
+
+      setIsLoading(true)
+      const supabase = createClient()
+
+      // Fetch User Loans
+      const { data: loansData, error: loansError } = await supabase
+        .from("loans")
+        .select("*")
+        .eq("user_id", currentUser.id)
+
+      if (loansError) console.error("Error fetching loans:", loansError)
+
+      const mappedLoans: Loan[] = (loansData || []).map((l: any) => ({
+        id: l.id,
+        userId: l.user_id,
+        type: l.type,
+        amount: Number(l.principal_amount),
+        remainingBalance: Number(l.remaining_balance),
+        interestRate: Number(l.interest_rate),
+        term: l.term_months,
+        monthlyPayment: Number(l.monthly_payment),
+        nextPaymentDate: l.next_payment_date,
+        status: l.status
+      }))
+      
+      setUserLoans(mappedLoans)
+
+      // Fetch Loan Products (Offers)
+      const { data: offersData, error: offersError } = await supabase
+        .from("loan_products")
+        .select("*")
+        .eq("is_active", true)
+
+      if (offersError) console.error("Error fetching loan offers:", offersError)
+
+      const mappedOffers: LoanOffer[] = (offersData || []).map((o: any) => ({
+        id: o.id,
+        type: o.type,
+        name: o.name,
+        minAmount: Number(o.min_amount),
+        maxAmount: Number(o.max_amount),
+        minTerm: o.min_term_months,
+        maxTerm: o.max_term_months,
+        interestRate: Number(o.interest_rate_min),
+        apr: Number(o.apr),
+        features: o.features || []
+      }))
+
+      setLoanOffers(mappedOffers)
+      setIsLoading(false)
+    }
+
+    fetchData()
+  }, [currentUser])
+
   const totalDebt = userLoans.reduce((sum, loan) => sum + loan.remainingBalance, 0)
   const monthlyPayments = userLoans.reduce((sum, loan) => sum + loan.monthlyPayment, 0)
 
@@ -81,6 +147,10 @@ export default function LoansPage() {
     "Compare my loan interest rates",
   ]
 
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+  }
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
@@ -93,7 +163,7 @@ export default function LoansPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main content area - 3 columns */}
         <div className="lg:col-span-3 space-y-6">
-          <Tabs defaultValue="my-loans" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList>
               <TabsTrigger value="my-loans">My Loans</TabsTrigger>
               <TabsTrigger value="marketplace">Loan Marketplace</TabsTrigger>
@@ -196,7 +266,9 @@ export default function LoansPage() {
                       <p className="text-sm text-muted-foreground mb-4">
                         Explore our loan marketplace to find the right financing for your needs
                       </p>
-                      <Button>Browse Loan Options</Button>
+                      <Button onClick={() => setActiveTab("marketplace")}>
+                        Browse Loan Options
+                      </Button>
                     </CardContent>
                   </Card>
                 )}

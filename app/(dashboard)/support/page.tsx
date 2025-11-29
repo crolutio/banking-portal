@@ -143,7 +143,7 @@ const aiAutoResponses: Record<string, { content: string; citations: SupportMessa
 }
 
 export default function SupportPage() {
-  const { role } = useRole()
+  const { currentRole } = useRole()
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null)
   const [newMessage, setNewMessage] = useState("")
   const [isTyping, setIsTyping] = useState(false)

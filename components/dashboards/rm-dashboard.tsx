@@ -1,9 +1,8 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import Link from "next/link"
 import { useRole } from "@/lib/role-context"
-import { getClientsByRmId, getAccountsByUserId, getNbaByClientId, getInteractionsByClientId } from "@/lib/mock-data"
 import { formatCurrency, formatRelativeTime } from "@/lib/format"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
@@ -11,34 +10,93 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Users, TrendingUp, AlertCircle, Calendar, ArrowRight, Star, Clock, Target } from "lucide-react"
+import { Users, TrendingUp, AlertCircle, Calendar, ArrowRight, Star, Clock, Target, Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import type { User } from "@/lib/types"
 
 export function RMDashboard() {
   const { currentUser } = useRole()
+  const [clients, setClients] = useState<any[]>([])
+  const [clientsLoading, setClientsLoading] = useState(true)
+  const [nbaList, setNbaList] = useState<any[]>([]) // Using mock NBA for now as table doesn't exist
 
-  const clients = useMemo(() => getClientsByRmId(currentUser.id), [currentUser.id])
+  useEffect(() => {
+    async function fetchData() {
+      if (!currentUser?.id) return
+
+      setClientsLoading(true)
+      const supabase = createClient()
+
+      // Fetch Clients assigned to this RM
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("assigned_rm_id", currentUser.id)
+
+      if (profilesError) {
+        console.error("Error fetching clients:", profilesError)
+        setClientsLoading(false)
+        return
+      }
+
+      // Fetch Accounts for all these clients to calculate AUM
+      const clientIds = (profiles || []).map((p: any) => p.id)
+      const { data: accounts, error: accountsError } = await supabase
+        .from("accounts")
+        .select("user_id, balance, currency")
+        .in("user_id", clientIds)
+
+      if (accountsError) console.error("Error fetching client accounts:", accountsError)
+
+      // Map clients with their calculated balance
+      const mappedClients = (profiles || []).map((p: any) => {
+        const clientAccounts = accounts?.filter((a: any) => a.user_id === p.id) || []
+        const totalBalance = clientAccounts.reduce((sum: number, acc: any) => {
+          const rate = acc.currency === "USD" ? 3.67 : 1
+          return sum + Number(acc.balance) * rate
+        }, 0)
+
+        return {
+          id: p.id,
+          name: p.full_name,
+          email: p.email,
+          avatar: p.avatar_url,
+          segment: p.segment || "Standard",
+          totalBalance
+        }
+      })
+
+      setClients(mappedClients)
+      
+      // Mock NBAs for now (fetching from 'crm_interactions' or similar would be better if table existed)
+      const mockNBAs = mappedClients.slice(0, 4).map((client: any, i: number) => ({
+        id: `nba-${i}`,
+        clientId: client.id,
+        clientName: client.name,
+        action: i % 2 === 0 ? "Portfolio Review" : "Upsell Premium Card",
+        reason: i % 2 === 0 ? "Quarterly check-in due" : "High spending detected",
+        priority: i === 0 ? "high" : "medium"
+      }))
+      setNbaList(mockNBAs)
+
+      setClientsLoading(false)
+    }
+
+    fetchData()
+  }, [currentUser])
 
   const portfolioValue = useMemo(() => {
-    return clients.reduce((total, client) => {
-      const accounts = getAccountsByUserId(client.id)
-      return (
-        total +
-        accounts.reduce((sum, acc) => {
-          const rate = acc.currency === "USD" ? 3.67 : 1
-          return sum + acc.balance * rate
-        }, 0)
-      )
-    }, 0)
+    return clients.reduce((total, client) => total + client.totalBalance, 0)
   }, [clients])
 
-  const vipClients = clients.filter((c) => c.segment === "VIP")
-  const atRiskClients = clients.filter((c) => c.segment === "At Risk")
-
-  const allNBAs = useMemo(() => {
-    return clients.flatMap((client) => getNbaByClientId(client.id))
-  }, [clients])
-
+  const vipClients = useMemo(() => clients.filter((c) => c.segment === "VIP"), [clients])
+  const atRiskClients = useMemo(() => clients.filter((c) => c.segment === "At Risk"), [clients])
+  
   const upcomingRenewals = 3 // mock
+
+  if (clientsLoading) {
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+  }
 
   return (
     <div className="space-y-6">
@@ -80,13 +138,8 @@ export function RMDashboard() {
           <CardContent>
             <div className="space-y-4">
               {clients.map((client) => {
-                const accounts = getAccountsByUserId(client.id)
-                const totalBalance = accounts.reduce((sum, acc) => {
-                  const rate = acc.currency === "USD" ? 3.67 : 1
-                  return sum + acc.balance * rate
-                }, 0)
-                const interactions = getInteractionsByClientId(client.id)
-                const lastInteraction = interactions[0]
+                // Mock last interaction date for now
+                const lastInteractionDate = new Date(Date.now() - Math.random() * 1000000000).toISOString()
 
                 return (
                   <div
@@ -99,7 +152,7 @@ export function RMDashboard() {
                         <AvatarFallback className="bg-primary/20 text-primary text-xs">
                           {client.name
                             .split(" ")
-                            .map((n) => n[0])
+                            .map((n: string) => n[0])
                             .join("")}
                         </AvatarFallback>
                       </Avatar>
@@ -120,17 +173,22 @@ export function RMDashboard() {
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Last contact: {lastInteraction ? formatRelativeTime(lastInteraction.date) : "Never"}
+                          Last contact: {formatRelativeTime(lastInteractionDate)}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">{formatCurrency(totalBalance)}</p>
+                      <p className="text-sm font-medium">{formatCurrency(client.totalBalance)}</p>
                       <p className="text-xs text-muted-foreground">Total Balance</p>
                     </div>
                   </div>
                 )
               })}
+              {clients.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground">
+                  No clients assigned yet.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -146,12 +204,11 @@ export function RMDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {allNBAs.slice(0, 4).map((nba) => {
-                  const client = clients.find((c) => c.id === nba.clientId)
+                {nbaList.map((nba) => {
                   return (
                     <div key={nba.id} className="p-3 rounded-lg bg-muted/30 border border-border">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-muted-foreground">{client?.name}</span>
+                        <span className="text-xs text-muted-foreground">{nba.clientName}</span>
                         <Badge
                           variant="outline"
                           className={`text-[10px] ${
@@ -170,6 +227,9 @@ export function RMDashboard() {
                     </div>
                   )
                 })}
+                {nbaList.length === 0 && (
+                    <div className="text-center py-2 text-sm text-muted-foreground">No pending actions</div>
+                )}
               </div>
             </CardContent>
           </Card>

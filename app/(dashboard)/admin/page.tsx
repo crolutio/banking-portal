@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -12,10 +12,11 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useRole } from "@/lib/role-context"
-import { policies } from "@/lib/mock-data"
-import { Shield, FileText, Bot, Save, Plus, Edit, Trash2, Lock, EyeOff, Globe } from "lucide-react"
+import { Shield, FileText, Bot, Save, Plus, Edit, Trash2, Lock, EyeOff, Globe, Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { Policy } from "@/lib/types"
 
-// Mock RBAC matrix
+// Mock RBAC matrix (keeping static as permissions are usually config-based)
 const rbacMatrix = [
   { resource: "Account Balances", customer: true, rm: true, risk: true, admin: true },
   { resource: "Transaction History", customer: true, rm: true, risk: true, admin: true },
@@ -28,7 +29,7 @@ const rbacMatrix = [
   { resource: "AI Guardrails", customer: false, rm: false, risk: false, admin: true },
 ]
 
-// Mock integrations
+// Mock integrations (keeping static for now)
 const integrations = [
   { id: "core_banking", name: "Core Banking System", status: "connected", lastSync: "2 minutes ago" },
   { id: "crm", name: "CRM Platform", status: "connected", lastSync: "5 minutes ago" },
@@ -48,12 +49,46 @@ const aiGuardrails = {
 }
 
 export default function AdminPage() {
-  const { role } = useRole()
-  const [selectedPolicy, setSelectedPolicy] = useState<(typeof policies)[0] | null>(null)
+  const { currentRole } = useRole()
+  const [policies, setPolicies] = useState<Policy[]>([])
+  const [selectedPolicy, setSelectedPolicy] = useState<Policy | null>(null)
   const [guardrailSettings, setGuardrailSettings] = useState(aiGuardrails)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      if (currentRole !== "admin") return
+
+      setIsLoading(true)
+      const supabase = createClient()
+
+      const { data: policiesData, error: policiesError } = await supabase
+        .from("policies")
+        .select("*")
+        .eq("is_active", true)
+
+      if (policiesError) console.error("Error fetching policies:", policiesError)
+
+      if (policiesData) {
+        const mappedPolicies: Policy[] = policiesData.map((p: any) => ({
+          id: p.id,
+          title: p.title,
+          version: p.version,
+          category: p.category,
+          content: p.content,
+          effectiveDate: p.effective_date
+        }))
+        setPolicies(mappedPolicies)
+      }
+      
+      setIsLoading(false)
+    }
+
+    fetchData()
+  }, [currentRole])
 
   // Check if user has access
-  if (role !== "admin") {
+  if (currentRole !== "admin") {
     return (
       <div className="flex items-center justify-center h-[60vh]">
         <Card className="max-w-md">
@@ -65,6 +100,10 @@ export default function AdminPage() {
         </Card>
       </div>
     )
+  }
+
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
   }
 
   return (
@@ -183,7 +222,7 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="px-4 pb-4 space-y-2">
+                <div className="px-4 pb-4 space-y-2 max-h-[500px] overflow-y-auto">
                   {policies.map((policy) => (
                     <div
                       key={policy.id}
@@ -203,6 +242,9 @@ export default function AdminPage() {
                       </div>
                     </div>
                   ))}
+                  {policies.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">No policies found.</p>
+                  )}
                 </div>
               </CardContent>
             </Card>

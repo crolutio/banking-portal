@@ -1,9 +1,8 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRole } from "@/lib/role-context"
-import { getAccountsByUserId, getTransactionsByAccountId, getCardsByUserId, getLoansByUserId } from "@/lib/mock-data"
 import { formatCurrency, formatDate, getCategoryColor } from "@/lib/format"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
@@ -24,29 +23,140 @@ import {
   TrendingUp,
   TrendingDown,
 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import type { Account, Transaction, Card as CardType, Loan } from "@/lib/types"
 
 export function CustomerDashboard() {
   const { currentUser } = useRole()
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
+  const [cards, setCards] = useState<CardType[]>([])
+  const [loans, setLoans] = useState<Loan[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const accounts = useMemo(() => getAccountsByUserId(currentUser.id), [currentUser.id])
-  const primaryAccount = accounts[0]
-  const transactions = useMemo(
-    () => (primaryAccount ? getTransactionsByAccountId(primaryAccount.id).slice(0, 5) : []),
-    [primaryAccount],
-  )
-  const cards = useMemo(() => getCardsByUserId(currentUser.id), [currentUser.id])
-  const loans = useMemo(() => getLoansByUserId(currentUser.id), [currentUser.id])
+  useEffect(() => {
+    async function fetchData() {
+      if (!currentUser?.id) return
 
-  const totalBalance = accounts.reduce((sum, acc) => {
+      setIsLoading(true)
+      const supabase = createClient()
+
+      // Fetch Accounts
+      const { data: accountsData, error: accountsError } = await supabase
+        .from("accounts")
+        .select("*")
+        .eq("user_id", currentUser.id)
+
+      if (accountsError) console.error("Error fetching accounts:", accountsError)
+      
+      const mappedAccounts: Account[] = (accountsData || []).map((a: any) => ({
+        id: a.id,
+        userId: a.user_id,
+        name: a.name,
+        type: a.type,
+        currency: a.currency,
+        balance: Number(a.balance),
+        availableBalance: Number(a.available_balance),
+        accountNumber: a.account_number,
+        iban: a.iban,
+        status: a.status
+      }))
+      
+      setAccounts(mappedAccounts)
+
+      // Fetch Transactions (for all accounts)
+      if (mappedAccounts.length > 0) {
+        const accountIds = mappedAccounts.map(a => a.id)
+        const { data: txData, error: txError } = await supabase
+          .from("transactions")
+          .select("*")
+          .in("account_id", accountIds)
+          .order("date", { ascending: false })
+          .limit(5)
+
+        if (txError) console.error("Error fetching transactions:", txError)
+
+        const mappedTransactions: Transaction[] = (txData || []).map((t: any) => ({
+          id: t.id,
+          accountId: t.account_id,
+          date: t.date,
+          description: t.description,
+          merchant: t.merchant,
+          category: t.category,
+          amount: Number(t.amount),
+          balance: Number(t.balance_after),
+          type: t.type,
+          status: t.status,
+          reference: t.reference
+        }))
+        
+        setTransactions(mappedTransactions)
+      } else {
+        setTransactions([])
+      }
+
+      // Fetch Cards
+      const { data: cardsData, error: cardsError } = await supabase
+        .from("cards")
+        .select("*")
+        .eq("user_id", currentUser.id)
+
+      if (cardsError) console.error("Error fetching cards:", cardsError)
+
+      const mappedCards: CardType[] = (cardsData || []).map((c: any) => ({
+        id: c.id,
+        userId: c.user_id,
+        accountId: c.account_id,
+        type: c.type,
+        brand: c.brand,
+        lastFour: c.last_four,
+        expiryDate: c.expiry_date,
+        status: c.status,
+        limit: c.credit_limit ? Number(c.credit_limit) : undefined,
+        spent: c.spent_amount ? Number(c.spent_amount) : undefined,
+        cardholderName: c.cardholder_name
+      }))
+
+      setCards(mappedCards)
+
+      // Fetch Loans
+      const { data: loansData, error: loansError } = await supabase
+        .from("loans")
+        .select("*")
+        .eq("user_id", currentUser.id)
+
+      if (loansError) console.error("Error fetching loans:", loansError)
+
+      const mappedLoans: Loan[] = (loansData || []).map((l: any) => ({
+        id: l.id,
+        userId: l.user_id,
+        type: l.type,
+        amount: Number(l.principal_amount),
+        remainingBalance: Number(l.remaining_balance),
+        interestRate: Number(l.interest_rate),
+        term: l.term_months,
+        monthlyPayment: Number(l.monthly_payment),
+        nextPaymentDate: l.next_payment_date,
+        status: l.status
+      }))
+
+      setLoans(mappedLoans)
+      setIsLoading(false)
+    }
+
+    fetchData()
+  }, [currentUser])
+
+  const totalBalance = useMemo(() => accounts.reduce((sum, acc) => {
     const rate = acc.currency === "USD" ? 3.67 : 1
     return sum + acc.balance * rate
-  }, 0)
+  }, 0), [accounts])
 
-  const thisMonthSpending = transactions
+  const thisMonthSpending = useMemo(() => transactions
     .filter((t) => t.type === "debit" && new Date(t.date).getMonth() === new Date().getMonth())
-    .reduce((sum, t) => sum + t.amount, 0)
+    .reduce((sum, t) => sum + t.amount, 0), [transactions])
 
-  const upcomingPayments = loans.reduce((sum, l) => sum + l.monthlyPayment, 0)
+  const upcomingPayments = useMemo(() => loans.reduce((sum, l) => sum + l.monthlyPayment, 0), [loans])
 
   const quickActions = [
     { label: "Send Money", icon: Send, href: "/payments" },
@@ -61,6 +171,10 @@ export function CustomerDashboard() {
     "Can I afford a 3,000 AED monthly payment?",
     "Explain my credit card benefits",
   ]
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-[50vh]">Loading dashboard...</div>
+  }
 
   return (
     <div className="space-y-6">
@@ -103,41 +217,45 @@ export function CustomerDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {transactions.map((txn) => (
-                <div
-                  key={txn.id}
-                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                        txn.type === "credit" ? "bg-emerald-500/20" : "bg-muted"
-                      }`}
-                    >
-                      {txn.type === "credit" ? (
-                        <ArrowDownRight className="h-5 w-5 text-emerald-500" />
-                      ) : (
-                        <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{txn.description}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{formatDate(txn.date)}</span>
-                        <Badge variant="secondary" className={`text-[10px] py-0 ${getCategoryColor(txn.category)}`}>
-                          {txn.category}
-                        </Badge>
+              {transactions.length > 0 ? (
+                transactions.map((txn) => (
+                  <div
+                    key={txn.id}
+                    className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                          txn.type === "credit" ? "bg-emerald-500/20" : "bg-muted"
+                        }`}
+                      >
+                        {txn.type === "credit" ? (
+                          <ArrowDownRight className="h-5 w-5 text-emerald-500" />
+                        ) : (
+                          <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{txn.description}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{formatDate(txn.date)}</span>
+                          <Badge variant="secondary" className={`text-[10px] py-0 ${getCategoryColor(txn.category)}`}>
+                            {txn.category}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
+                    <span
+                      className={`text-sm font-medium ${txn.type === "credit" ? "text-emerald-500" : "text-foreground"}`}
+                    >
+                      {txn.type === "credit" ? "+" : "-"}
+                      {formatCurrency(txn.amount)}
+                    </span>
                   </div>
-                  <span
-                    className={`text-sm font-medium ${txn.type === "credit" ? "text-emerald-500" : "text-foreground"}`}
-                  >
-                    {txn.type === "credit" ? "+" : "-"}
-                    {formatCurrency(txn.amount)}
-                  </span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">No recent transactions</div>
+              )}
             </div>
           </CardContent>
         </Card>

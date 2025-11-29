@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRole } from "@/lib/role-context"
-import { getCardsByUserId } from "@/lib/mock-data"
 import { formatCurrency, formatCardNumber } from "@/lib/format"
 import { PageHeader } from "@/components/ui/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,9 +20,10 @@ import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { CitationBadge, ConfidenceIndicator } from "@/components/ai/citation-badge"
-import { CreditCard, Snowflake, Sun, Settings2, AlertTriangle, TrendingUp, Bot, Copy, RefreshCw } from "lucide-react"
+import { CreditCard, Snowflake, Sun, Settings2, AlertTriangle, TrendingUp, Bot, Copy, RefreshCw, Loader2 } from "lucide-react"
 import type { Card as CardType } from "@/lib/types"
 import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
+import { createClient } from "@/lib/supabase/client"
 
 function CreditCardVisual({ card, showDetails = false }: { card: CardType; showDetails?: boolean }) {
   const [flipped, setFlipped] = useState(false)
@@ -314,17 +314,57 @@ function CardInsightsPanel({ card }: { card: CardType }) {
 export default function CardsPage() {
   const { currentUser } = useRole()
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
+  const [cards, setCards] = useState<CardType[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  const cards = useMemo(() => getCardsByUserId(currentUser.id), [currentUser.id])
+  useEffect(() => {
+    async function fetchCards() {
+      if (!currentUser?.id) return
 
-  const handleFreeze = (cardId: string) => {
-    // Mock freeze action
+      setIsLoading(true)
+      const supabase = createClient()
+
+      const { data, error } = await supabase
+        .from("cards")
+        .select("*")
+        .eq("user_id", currentUser.id)
+
+      if (error) {
+        console.error("Error fetching cards:", error)
+      } else {
+        const mappedCards: CardType[] = (data || []).map((c: any) => ({
+          id: c.id,
+          userId: c.user_id,
+          accountId: c.account_id,
+          type: c.type,
+          brand: c.brand,
+          lastFour: c.last_four,
+          expiryDate: c.expiry_date,
+          status: c.status,
+          limit: c.credit_limit ? Number(c.credit_limit) : undefined,
+          spent: c.spent_amount ? Number(c.spent_amount) : undefined,
+          cardholderName: c.cardholder_name
+        }))
+        setCards(mappedCards)
+      }
+      setIsLoading(false)
+    }
+
+    fetchCards()
+  }, [currentUser])
+
+  const handleFreeze = async (cardId: string) => {
+    // In a real app, we would update Supabase here
     console.log("Freezing card:", cardId)
+    // Optimistic update
+    setCards(prev => prev.map(c => c.id === cardId ? { ...c, status: "frozen" } : c))
   }
 
-  const handleUnfreeze = (cardId: string) => {
-    // Mock unfreeze action
+  const handleUnfreeze = async (cardId: string) => {
+    // In a real app, we would update Supabase here
     console.log("Unfreezing card:", cardId)
+    // Optimistic update
+    setCards(prev => prev.map(c => c.id === cardId ? { ...c, status: "active" } : c))
   }
 
   // AI Banker questions relevant to cards page
@@ -334,6 +374,10 @@ export default function CardsPage() {
     "Why was my card declined?",
     "How do I report a lost card?",
   ]
+
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+  }
 
   return (
     <div className="space-y-6">

@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRole } from "@/lib/role-context"
-import { getAccountsByUserId } from "@/lib/mock-data"
+// removed getAccountsByUserId import
 import { formatCurrency, formatAccountNumber } from "@/lib/format"
 import { PageHeader } from "@/components/ui/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -35,7 +35,8 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react"
-import type { Citation } from "@/lib/types"
+import type { Citation, Account } from "@/lib/types"
+import { createClient } from "@/lib/supabase/client"
 
 interface Beneficiary {
   id: string
@@ -74,7 +75,30 @@ const mockBeneficiaries: Beneficiary[] = [
 
 function TransferForm() {
   const { currentUser } = useRole()
-  const accounts = useMemo(() => getAccountsByUserId(currentUser.id), [currentUser.id])
+  const [accounts, setAccounts] = useState<Account[]>([])
+
+  useEffect(() => {
+    async function fetchAccounts() {
+      if (!currentUser?.id) return
+      const supabase = createClient()
+      const { data } = await supabase.from('accounts').select('*').eq('user_id', currentUser.id)
+      if (data) {
+        setAccounts(data.map((a: any) => ({
+          id: a.id,
+          userId: a.user_id,
+          name: a.name,
+          type: a.type,
+          currency: a.currency,
+          balance: Number(a.balance),
+          availableBalance: Number(a.available_balance),
+          accountNumber: a.account_number,
+          iban: a.iban,
+          status: a.status
+        })))
+      }
+    }
+    fetchAccounts()
+  }, [currentUser])
 
   const [transferType, setTransferType] = useState<"internal" | "domestic" | "international">("internal")
   const [fromAccount, setFromAccount] = useState<string>("")
@@ -101,13 +125,45 @@ function TransferForm() {
     return "3-5 business days"
   }
 
-  const handleTransfer = () => {
+  const handleTransfer = async () => {
     setIsProcessing(true)
-    setTimeout(() => {
-      setIsProcessing(false)
+    const supabase = createClient()
+    const numericAmount = Number(amount)
+
+    try {
+      // 1. Create debit transaction
+      const { error: txError } = await supabase.from('transactions').insert({
+        account_id: fromAccount,
+        amount: numericAmount,
+        type: 'debit',
+        category: 'transfer',
+        description: `Transfer to ${selectedBeneficiary?.name}`,
+        merchant: selectedBeneficiary?.name,
+        status: 'completed',
+        balance_after: (selectedFromAccount?.balance || 0) - numericAmount,
+        date: new Date().toISOString()
+      })
+      if (txError) throw txError
+
+      // 2. Update account balance
+      if (selectedFromAccount) {
+        await supabase.from('accounts')
+          .update({
+            balance: selectedFromAccount.balance - numericAmount,
+            available_balance: selectedFromAccount.availableBalance - numericAmount
+          })
+          .eq('id', fromAccount)
+      }
+
       setShowConfirm(false)
       setShowSuccess(true)
-    }, 2000)
+      
+      // Ideally refresh accounts here
+    } catch (error) {
+      console.error("Transfer failed", error)
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   const aiExplanation = {

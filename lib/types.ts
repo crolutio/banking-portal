@@ -200,7 +200,14 @@ export interface AIResponse {
 
 export interface AIAction {
   id: string
-  type: "create_transfer" | "dispute_charge" | "freeze_card" | "start_loan_application" | "schedule_meeting"
+  type:
+    | "create_transfer"
+    | "dispute_charge"
+    | "freeze_card"
+    | "start_loan_application"
+    | "schedule_meeting"
+    | "negotiate_bill"
+    | "simulate_purchase"
   label: string
   data?: Record<string, unknown>
 }
@@ -279,4 +286,36 @@ export interface SavingsGoalTransaction {
   type: "deposit" | "withdrawal"
   date: string
   description: string
+}
+
+// Reward Types
+export interface RewardProfile {
+  userId: string
+  totalPoints: number
+  lifetimePoints: number
+  tier: "Bronze" | "Silver" | "Gold" | "Platinum"
+  nextTierProgress: number
+}
+
+export type RewardCategory = "purchase" | "referral" | "login_streak" | "account_opening" | "marketplace_bonus" | "gift_card" | "travel" | "cashback" | "charity" | "gadget"
+
+export interface RewardItem {
+  id: string
+  name: string
+  description: string
+  pointsCost: number
+  category: RewardCategory
+  imageUrl: string
+  isFeatured: boolean
+  stockQuantity?: number
+}
+
+export interface RewardActivity {
+  id: string
+  userId: string
+  amount: number
+  type: "earned" | "redeemed" | "expired" | "adjusted"
+  category: RewardCategory
+  description: string
+  createdAt: string
 }

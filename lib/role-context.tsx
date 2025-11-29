@@ -12,11 +12,11 @@ interface RoleContextType {
 }
 
 const roleUserMap: Record<UserRole, string> = {
-  retail_customer: "user_retail_1",
-  sme_customer: "user_sme_1",
-  relationship_manager: "user_rm_1",
-  risk_compliance: "user_risk_1",
-  admin: "user_admin_1",
+  retail_customer: "11111111-1111-1111-1111-111111111111",
+  sme_customer: "55555555-5555-5555-5555-555555555555",
+  relationship_manager: "66666666-6666-6666-6666-666666666666",
+  risk_compliance: "88888888-8888-8888-8888-888888888888",
+  admin: "99999999-9999-9999-9999-999999999999",
 }
 
 const roleLabels: Record<UserRole, string> = {

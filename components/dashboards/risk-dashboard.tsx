@@ -1,26 +1,91 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useEffect } from "react"
 import Link from "next/link"
-import { riskAlerts, auditEvents } from "@/lib/mock-data"
 import { formatRelativeTime, getSeverityColor, getStatusColor } from "@/lib/format"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ShieldAlert, AlertTriangle, CheckCircle, Clock, ArrowRight, FileWarning, Activity } from "lucide-react"
+import { ShieldAlert, AlertTriangle, CheckCircle, Clock, ArrowRight, FileWarning, Activity, Loader2 } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { RiskAlert, AuditEvent } from "@/lib/types"
 
 export function RiskDashboard() {
-  const openAlerts = useMemo(() => riskAlerts.filter((a) => a.status === "open"), [])
-  const investigatingAlerts = useMemo(() => riskAlerts.filter((a) => a.status === "investigating"), [])
-  const criticalAlerts = useMemo(() => riskAlerts.filter((a) => a.severity === "critical"), [])
-  const resolvedToday = useMemo(() => {
-    const today = new Date().toISOString().split("T")[0]
-    return riskAlerts.filter((a) => a.status === "resolved" && a.createdAt.startsWith(today)).length
+  const [alerts, setAlerts] = useState<RiskAlert[]>([])
+  const [auditLogs, setAuditLogs] = useState<AuditEvent[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsLoading(true)
+      const supabase = createClient()
+
+      // Fetch Risk Alerts
+      const { data: alertsData, error: alertsError } = await supabase
+        .from("risk_alerts")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20)
+
+      if (alertsError) console.error("Error fetching risk alerts:", alertsError)
+
+      if (alertsData) {
+        setAlerts(alertsData.map((a: any) => ({
+          id: a.id,
+          userId: a.user_id,
+          type: a.type,
+          severity: a.severity,
+          title: a.title,
+          description: a.description,
+          status: a.status,
+          createdAt: a.created_at,
+          assignedTo: a.assigned_to_id
+        })))
+      }
+
+      // Fetch Audit Logs
+      const { data: logsData, error: logsError } = await supabase
+        .from("audit_logs")
+        .select("*")
+        .order("timestamp", { ascending: false })
+        .limit(5)
+
+      if (logsError) console.error("Error fetching audit logs:", logsError)
+
+      if (logsData) {
+        setAuditLogs(logsData.map((l: any) => ({
+          id: l.id,
+          userId: l.user_id,
+          userRole: l.user_role,
+          action: l.action,
+          actionType: l.action_type,
+          timestamp: l.timestamp,
+          details: l.details,
+          sourcesAccessed: l.sources_accessed || [],
+          redactions: l.redactions || [],
+          riskFlags: l.risk_flags || []
+        })))
+      }
+
+      setIsLoading(false)
+    }
+
+    fetchData()
   }, [])
 
-  const recentAuditEvents = useMemo(() => auditEvents.slice(0, 5), [])
+  const openAlerts = useMemo(() => alerts.filter((a) => a.status === "open"), [alerts])
+  const investigatingAlerts = useMemo(() => alerts.filter((a) => a.status === "investigating"), [alerts])
+  const criticalAlerts = useMemo(() => alerts.filter((a) => a.severity === "critical"), [alerts])
+  const resolvedToday = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0]
+    return alerts.filter((a) => a.status === "resolved" && a.createdAt.startsWith(today)).length
+  }, [alerts])
+
+  if (isLoading) {
+    return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+  }
 
   return (
     <div className="space-y-6">
@@ -55,7 +120,7 @@ export function RiskDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {riskAlerts.slice(0, 6).map((alert) => (
+              {alerts.slice(0, 6).map((alert) => (
                 <div
                   key={alert.id}
                   className="flex items-start justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors"
@@ -82,6 +147,9 @@ export function RiskDashboard() {
                   </Badge>
                 </div>
               ))}
+              {alerts.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground">No alerts found.</div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -97,7 +165,7 @@ export function RiskDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {recentAuditEvents.map((event) => (
+                {auditLogs.map((event) => (
                   <div
                     key={event.id}
                     className="flex items-start gap-3 pb-3 border-b border-border last:border-0 last:pb-0"
@@ -109,6 +177,9 @@ export function RiskDashboard() {
                     </div>
                   </div>
                 ))}
+                {auditLogs.length === 0 && (
+                    <div className="text-center py-4 text-sm text-muted-foreground">No recent activity.</div>
+                )}
               </div>
               <Button variant="link" size="sm" className="px-0 mt-3" asChild>
                 <Link href="/audit">View Full Audit Log</Link>

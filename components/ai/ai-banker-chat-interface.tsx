@@ -53,7 +53,9 @@ import {
   MessageSquare,
   LineChart,
   ShieldCheck,
-  PiggyBank
+  PiggyBank,
+  Landmark,
+  CreditCard
 } from "lucide-react"
 
 type ScopeOption = {
@@ -154,6 +156,30 @@ export const AI_AGENT_THEMES: Record<AIAgentId, AgentTheme> = {
     placeholder: "Ask for live research or news...",
     pulseColor: "#0f172a",
     iconGradient: "linear-gradient(135deg, #0f172a, #1e293b)"
+  },
+  loan_advisor: {
+    icon: Landmark,
+    accent: "#1e40af",
+    accentMuted: "rgba(59,130,246,0.15)",
+    gradientFrom: "rgba(59,130,246,0.12)",
+    gradientTo: "rgba(37,99,235,0)",
+    badgeBg: "rgba(219,234,254,0.9)",
+    badgeText: "#1e40af",
+    placeholder: "Ask about loans, mortgages, or refinancing...",
+    pulseColor: "#3b82f6",
+    iconGradient: "linear-gradient(135deg, #dbeafe, #bfdbfe)"
+  },
+  spending_analyst: {
+    icon: CreditCard,
+    accent: "#7c3aed",
+    accentMuted: "rgba(139,92,246,0.15)",
+    gradientFrom: "rgba(139,92,246,0.12)",
+    gradientTo: "rgba(167,139,250,0)",
+    badgeBg: "rgba(237,233,254,0.9)",
+    badgeText: "#5b21b6",
+    placeholder: "Ask about spending patterns or budgets...",
+    pulseColor: "#8b5cf6",
+    iconGradient: "linear-gradient(135deg, #ede9fe, #ddd6fe)"
   }
 }
 

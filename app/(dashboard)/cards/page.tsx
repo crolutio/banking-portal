@@ -369,10 +369,11 @@ export default function CardsPage() {
 
   // AI Banker questions relevant to cards page
   const aiQuestions = [
+    "Where am I overspending this month?",
+    "Which subscriptions can I cancel?",
+    "Analyze my restaurant spending trend",
     "What are my card benefits?",
-    "How do I increase my credit limit?",
-    "Why was my card declined?",
-    "How do I report a lost card?",
+    "Compare my spending vs last month",
   ]
 
   if (isLoading) {
@@ -492,7 +493,12 @@ export default function CardsPage() {
 
         {/* AI Banker Widget - takes 1 column on the side */}
         <div className="lg:col-span-1">
-          <AskAIBankerWidget questions={aiQuestions} description="Get help with your cards" />
+          <AskAIBankerWidget 
+            questions={aiQuestions} 
+            description="Analyze spending patterns and optimize your budget" 
+            title="Ask AI Spending Analyst"
+            agentId="spending_analyst"
+          />
         </div>
       </div>
 

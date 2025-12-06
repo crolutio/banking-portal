@@ -144,7 +144,8 @@ export default function LoansPage() {
     "Am I eligible for a personal loan?",
     "What's my debt-to-income ratio?",
     "How can I pay off my loan faster?",
-    "Compare my loan interest rates",
+    "Should I refinance my mortgage at current rates?",
+    "Compare my loan interest rates to market",
   ]
 
   if (isLoading) {
@@ -690,7 +691,12 @@ export default function LoansPage() {
         {/* Sidebar with AI widget - 1 column */}
         <div className="lg:col-span-1">
           <div className="sticky top-6">
-            <AskAIBankerWidget questions={aiQuestions} description="Get help with loans and financing options" />
+            <AskAIBankerWidget 
+              questions={aiQuestions} 
+              description="Get expert advice on loans, mortgages, and debt strategies" 
+              title="Ask AI Loan Advisor"
+              agentId="loan_advisor"
+            />
           </div>
         </div>
       </div>

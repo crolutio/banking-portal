@@ -3,8 +3,9 @@ import { getAgentPersona } from "@/lib/ai/agents"
 
 const PERPLEXITY_ENDPOINT = "https://api.perplexity.ai/chat/completions"
 
-// Using the latest supported online model
-const MODEL_NAME = "llama-3.1-sonar-large-128k-online"
+// Using the standard chat model that is currently widely supported
+// This avoids the "invalid model" error for llama-3.1 variants which might be gated or renamed
+const MODEL_NAME = "sonar-pro" 
 
 export async function POST(req: Request) {
   try {

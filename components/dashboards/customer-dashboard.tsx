@@ -2,6 +2,7 @@
 
 import { useMemo, useEffect, useState } from "react"
 import Link from "next/link"
+import { useFloatingChat } from "@/components/ai/floating-chat-context"
 import { useRole } from "@/lib/role-context"
 import { formatCurrency, formatDate, getCategoryColor } from "@/lib/format"
 import { PageHeader } from "@/components/ui/page-header"
@@ -27,6 +28,7 @@ import type { Account, Transaction, Card as CardType, Loan, TransactionCategory 
 
 export function CustomerDashboard() {
   const { currentUser } = useRole()
+  const { openChatWithMessage } = useFloatingChat()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [cards, setCards] = useState<CardType[]>([])
@@ -360,9 +362,9 @@ export function CustomerDashboard() {
                 variant="secondary"
                 size="sm"
                 className="text-xs h-auto py-2 px-3 bg-background/50 hover:bg-background"
-                asChild
+                onClick={() => openChatWithMessage(chip)}
               >
-                <Link href={`/ai-banker?q=${encodeURIComponent(chip)}`}>{chip}</Link>
+                {chip}
               </Button>
             ))}
           </div>

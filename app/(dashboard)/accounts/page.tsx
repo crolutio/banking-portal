@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { useRole } from "@/lib/role-context"
+import { useFloatingChat } from "@/components/ai/floating-chat-context"
 import { formatCurrency, formatAccountNumber, formatDate, getCategoryColor, getStatusColor } from "@/lib/format"
 import { PageHeader } from "@/components/ui/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -348,8 +349,13 @@ function AccountInsightsPanel({ account, transactions }: { account: Account, tra
               Transactions
             </Badge>
           </div>
-          <Button variant="link" size="sm" className="px-0 mt-2 text-primary" asChild>
-            <Link href={`/ai-banker?scope=account:${account.id}`}>Ask more about this account</Link>
+          <Button 
+            variant="link" 
+            size="sm" 
+            className="px-0 mt-2 text-primary"
+            onClick={() => openChatWithMessage(`Tell me more about my ${account.type} account ending in ${account.account_number.slice(-4)}`)}
+          >
+            Ask more about this account
           </Button>
         </CardContent>
       </Card>
@@ -435,6 +441,7 @@ function AccountInsightsPanel({ account, transactions }: { account: Account, tra
 
 export default function AccountsPage() {
   const { currentUser } = useRole()
+  const { openChatWithMessage } = useFloatingChat()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])

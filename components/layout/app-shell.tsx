@@ -25,7 +25,6 @@ import {
   Landmark,
   TrendingUp,
   HelpCircle,
-  Bot,
   Users,
   ShieldAlert,
   Settings,
@@ -38,6 +37,7 @@ import {
   PiggyBank,
   Gift,
 } from "lucide-react"
+import { DemoHelpTooltip } from "@/components/layout/demo-help-tooltip"
 
 interface NavItem {
   label: string
@@ -56,7 +56,6 @@ const navItems: NavItem[] = [
   { label: "Rewards", href: "/rewards", icon: Gift },
   { label: "Marketplace", href: "/marketplace", icon: Store },
   { label: "Support", href: "/support", icon: HelpCircle },
-  { label: "AI Banker", href: "/ai-banker", icon: Bot },
   { label: "RM Workspace", href: "/rm-workspace", icon: Users, roles: ["relationship_manager"] },
   { label: "Risk & Compliance", href: "/risk-compliance", icon: ShieldAlert, roles: ["risk_compliance", "admin"] },
   { label: "Admin Console", href: "/admin", icon: Settings, roles: ["admin"] },
@@ -211,6 +210,7 @@ function Topbar() {
         <div className="hidden lg:flex items-center gap-2">
           <Building2 className="h-6 w-6 text-primary" />
           <span className="font-semibold">Bank of the Future</span>
+          <DemoHelpTooltip />
         </div>
       </div>
 

@@ -1,12 +1,34 @@
-import { OpenAI } from "openai"
-import { OpenAIStream, StreamingTextResponse } from "ai"
+import { GoogleGenerativeAI } from "@google/generative-ai"
+import { GoogleGenerativeAIStream, StreamingTextResponse } from "ai"
 import { createDirectClient } from "@/lib/supabase/direct-client"
 import { getAgentPersona } from "@/lib/ai/agents"
 import { generateForecasts } from "@/lib/forecasting/simple-forecast"
 import { generateSavingsSuggestions } from "@/lib/savings/suggestions"
+import { detectScenario } from "@/lib/agent/scenario-detector"
+import { analyzeLoanPreApproval } from "@/lib/calculations/loan-preapproval"
+import { analyzeSpendingOptimization } from "@/lib/calculations/spending-optimizer"
 
 // Set the runtime to nodejs for better compatibility
 export const runtime = "nodejs"
+
+// Helper to provide page-specific context
+function getPageSpecificContext(page: string): string {
+  const contexts: Record<string, string> = {
+    "/home": "User can see their account balances, recent transactions, and financial overview.",
+    "/accounts": "User can see all their accounts with balances and transaction history.",
+    "/cards": "User can see all their credit/debit cards, spending limits, and card benefits.",
+    "/loans": "User can see their active loans, payment schedules, and loan marketplace.",
+    "/investments": "User can see their portfolio holdings, performance, and asset allocation.",
+    "/savings-goals": "User can see their savings goals, progress, and contribution schedules.",
+    "/rewards": "User can see their reward points, tier status, and redemption options.",
+    "/marketplace": "User can see connected apps and available integrations.",
+    "/support": "User is looking for help with their account or has a support question.",
+    "/risk-compliance": "Staff view - risk alerts, compliance checks, and investigations.",
+    "/rm-workspace": "Relationship manager view - client portfolio and next best actions.",
+    "/admin": "Admin console - system configuration and management.",
+  }
+  return contexts[page] || "User is navigating the banking portal."
+}
 
 // Helper to safely fetch data
 async function fetchData(table: string, userId: string, column = "user_id") {
@@ -30,21 +52,20 @@ async function fetchData(table: string, userId: string, column = "user_id") {
 
 export async function POST(req: Request) {
   try {
-    const { messages, userId: requestedUserId, agentId } = await req.json()
+    const { messages, userId: requestedUserId, agentId, currentPage } = await req.json()
     const persona = getAgentPersona(agentId)
 
     console.log("Checking API Keys:", { 
-      hasOpenAI: !!process.env.OPENAI_API_KEY, 
+      hasGemini: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY, 
       envKeys: Object.keys(process.env).filter(k => k.includes('API')) 
     })
 
-    if (!process.env.OPENAI_API_KEY) {
-      return new Response("Missing OPENAI_API_KEY", { status: 500 })
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      return new Response("Missing GOOGLE_GENERATIVE_AI_API_KEY", { status: 500 })
     }
 
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    })
+    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY)
+    const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
 
     // Default to Sarah Chen for demo if no user provided
     const userId = requestedUserId || "11111111-1111-1111-1111-111111111111"
@@ -214,9 +235,127 @@ export async function POST(req: Request) {
       savingsOpportunities
     }
 
+    // Detect Special Scenarios
+    const lastUserMessage = messages.length > 0 ? messages[messages.length - 1].content : ""
+    const conversationHistory = messages.slice(-5).map((m: any) => m.content)
+    const scenario = detectScenario(lastUserMessage, conversationHistory)
+    
+    let scenarioEnhancement = ""
+    
+    // Handle loan with travel scenario - "The Strategist"
+    if (scenario.type === 'loan_with_travel') {
+      const optimization = analyzeSpendingOptimization(typedTransactions)
+      scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: User wants a loan for travel purposes.
+
+However, I've analyzed their spending and found significant savings opportunities!
+
+OPTIMIZATION RESULTS:
+- Total Monthly Savings: AED ${optimization.totalMonthlySavings.toFixed(2)}
+- Total Annual Savings: AED ${optimization.totalAnnualSavings.toFixed(2)}
+- Number of Opportunities: ${optimization.opportunities.length}
+
+INSTRUCTION: Act as "The Strategist" - Present these savings as a smart alternative to taking a loan. 
+Show enthusiasm about helping them fund their trip without debt. 
+Include this optimization card at the end of your response:
+
+\`\`\`optimization
+${JSON.stringify(optimization, null, 2)}
+\`\`\`
+
+Message tone: Excited, helpful, empowering. "Great news! You don't need a loan - I found the money!"`
+    }
+    
+    // Handle loan request scenario - Pre-Approval
+    if (scenario.type === 'loan_request') {
+      const requestedAmount = scenario.context?.loanAmount || 50000
+      const requestedTerm = 24 // Default 24 months
+      
+      const preApproval = analyzeLoanPreApproval({
+        requestedAmount,
+        requestedTerm,
+        accounts,
+        existingLoans: loans,
+        transactions: typedTransactions,
+        creditScore: 720 // Default credit score
+      })
+      
+      scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: User is requesting a loan pre-approval assessment.
+
+LOAN PRE-APPROVAL ANALYSIS:
+- Requested Amount: AED ${requestedAmount.toLocaleString()}
+- Approval Status: ${preApproval.approved ? 'PRE-APPROVED' : 'CONDITIONAL'}
+- Monthly Payment: AED ${preApproval.monthlyPayment.toFixed(2)}
+- Interest Rate: ${preApproval.interestRate}%
+- DTI Ratio: ${preApproval.dtiPercentage}%
+
+INSTRUCTION: Explain the pre-approval decision clearly and professionally.
+Highlight the strengths, address any concerns, and outline the next steps.
+Include this loan approval card at the end of your response:
+
+\`\`\`loan-approval
+${JSON.stringify(preApproval, null, 2)}
+\`\`\`
+
+Message tone: Professional, transparent, supportive.`
+    }
+    
+    // Handle spending analysis scenario
+    if (scenario.type === 'spending_analysis') {
+      const optimization = analyzeSpendingOptimization(typedTransactions)
+      scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: User wants spending analysis and savings opportunities.
+
+OPTIMIZATION RESULTS:
+- Total Monthly Savings: AED ${optimization.totalMonthlySavings.toFixed(2)}
+- Total Annual Savings: AED ${optimization.totalAnnualSavings.toFixed(2)}
+- Opportunities Found: ${optimization.opportunities.length}
+
+INSTRUCTION: Present the savings opportunities with actionable advice.
+Include this optimization card:
+
+\`\`\`optimization
+${JSON.stringify(optimization, null, 2)}
+\`\`\`
+
+Message tone: Analytical, helpful, action-oriented.`
+    }
+    
+    // Handle travel context scenario - "The Concierge"
+    if (scenario.type === 'travel_context') {
+      const destination = scenario.context?.travelDestination || 'your destination'
+      scenarioEnhancement = `
+
+SPECIAL SCENARIO DETECTED: User is traveling to ${destination}.
+
+INSTRUCTION: Act as "The Concierge" - provide travel-specific financial advice:
+- Recommend best cards for foreign transactions (lowest fees)
+- Suggest enabling travel notifications
+- Advise on currency exchange tips
+- Remind about expense tracking while abroad
+
+Message tone: Friendly, knowledgeable, proactive.`
+    }
+
+    // Add page context awareness
+    let pageContext = ""
+    if (currentPage) {
+      pageContext = `
+
+CURRENT PAGE CONTEXT:
+User is currently viewing: ${currentPage}
+Tailor your response to be relevant to what they can see on this page.
+${getPageSpecificContext(currentPage)}
+`
+    }
+
     // Prepare System Prompt
     const systemPrompt = `
-${persona.personaPrompt}
+${persona.personaPrompt}${scenarioEnhancement}${pageContext}
 
 You work for "Bank of the Future" and have access to the user's complete financial data.
 Your goal is to provide accurate, helpful, and concise advice that matches your specialization.
@@ -300,16 +439,34 @@ RESPONSE STYLE:
     // Log for debugging
     console.log(`[AI Chat] System prompt prepared. Data counts: Accounts=${accounts.length}, Tx=${transactions.length}, Holdings=${holdings.length}`)
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      stream: true,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages,
-      ],
+    // Convert messages to Gemini format
+    // Add system prompt as first user message since Gemini doesn't have a separate system instruction in startChat
+    const geminiMessages = [
+      {
+        role: 'user',
+        parts: [{text: `${systemPrompt}\n\nPlease acknowledge you understand this context and are ready to assist.`}]
+      },
+      {
+        role: 'model',
+        parts: [{text: 'I understand. I have access to all the financial data and am ready to assist with any questions about accounts, transactions, investments, loans, cards, savings goals, and rewards. How can I help you today?'}]
+      },
+      ...messages.map((msg: any) => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }))
+    ]
+
+    // Start chat with history
+    const chat = model.startChat({
+      history: geminiMessages.slice(0, -1), // All but last message
     })
 
-    const stream = OpenAIStream(response as any)
+    // Get response for last message
+    const lastMessage = messages[messages.length - 1]?.content || ""
+    const result = await chat.sendMessageStream(lastMessage)
+
+    // Create streaming response
+    const stream = GoogleGenerativeAIStream(result)
     return new StreamingTextResponse(stream)
 
   } catch (error: any) {

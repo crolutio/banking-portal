@@ -33,6 +33,7 @@ import { CitationBadge } from "@/components/ai/citation-badge"
 import { useRole } from "@/lib/role-context"
 import { AIAction } from "@/lib/types"
 import { AI_AGENT_PERSONAS, type AIAgentId } from "@/lib/ai/agents"
+import { LoanApprovalCard, OptimizationResultCard } from "@/components/ai/special-cards"
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, PieChart, Pie, Cell } from "recharts"
 import {
   Send,
@@ -73,12 +74,12 @@ const scopeOptions: ScopeOption[] = [
 ]
 
 const suggestedPrompts = [
+  "I want to take a loan for my Japan trip",
+  "Request a new loan for 50,000 AED",
+  "Analyze my spending and find savings opportunities",
+  "I'm traveling to London next week",
   "How much did I spend on restaurants this month?",
-  "Why was I charged this fee?",
   "Can I afford a 3,000 AED monthly payment?",
-  "Explain my credit card benefits",
-  "What's my current account balance?",
-  "Show me my recurring payments",
 ]
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
@@ -253,21 +254,46 @@ const FormattedText = ({ text }: { text: string }) => {
 };
 
 const MessageContent = ({ content }: { content: string }) => {
-  const parts = content.split(/(```chart[\s\S]*?```)/g);
+  // Split content by all special code blocks (chart, loan-approval, optimization)
+  const parts = content.split(/(```(?:chart|loan-approval|optimization)[\s\S]*?```)/g);
 
   return (
     <div className="text-sm space-y-2">
       {parts.map((part, i) => {
+        // Handle chart blocks
         if (part.startsWith("```chart")) {
           try {
             const jsonStr = part.replace(/^```chart\s*/, "").replace(/```$/, "");
             const chartData = JSON.parse(jsonStr);
             return <ChartRenderer key={i} data={chartData} />;
           } catch (e) {
-             // If parsing fails (e.g. streaming incomplete), show nothing or raw text
+             // If parsing fails (e.g. streaming incomplete), show nothing
              return null;
           }
         }
+        
+        // Handle loan-approval blocks
+        if (part.startsWith("```loan-approval")) {
+          try {
+            const jsonStr = part.replace(/^```loan-approval\s*/, "").replace(/```$/, "");
+            const loanData = JSON.parse(jsonStr);
+            return <LoanApprovalCard key={i} data={loanData} />;
+          } catch (e) {
+            return null;
+          }
+        }
+        
+        // Handle optimization blocks
+        if (part.startsWith("```optimization")) {
+          try {
+            const jsonStr = part.replace(/^```optimization\s*/, "").replace(/```$/, "");
+            const optimizationData = JSON.parse(jsonStr);
+            return <OptimizationResultCard key={i} data={optimizationData} />;
+          } catch (e) {
+            return null;
+          }
+        }
+        
         return <FormattedText key={i} text={part} />;
       })}
     </div>

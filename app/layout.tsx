@@ -4,6 +4,8 @@ import { Inter, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { RoleProvider } from "@/lib/role-context"
 import { ThemeProvider } from "@/components/theme-provider"
+import { FloatingChatProvider } from "@/components/ai/floating-chat-context"
+import { FloatingChatBubble } from "@/components/ai/floating-chat-bubble"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -54,7 +56,12 @@ export default function RootLayout({
           forcedTheme="light"
           storageKey="bank-of-the-future-theme"
         >
-          <RoleProvider>{children}</RoleProvider>
+          <RoleProvider>
+            <FloatingChatProvider>
+              {children}
+              <FloatingChatBubble />
+            </FloatingChatProvider>
+          </RoleProvider>
           <Analytics />
         </ThemeProvider>
       </body>

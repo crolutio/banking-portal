@@ -1044,42 +1044,46 @@ function AppCard({ app, onConnect, onViewOffers, onViewDetails, recommended }: A
   return (
     <Card
       className={cn(
-        "relative overflow-hidden transition-all hover:shadow-md cursor-pointer",
-        recommended && "ring-1 ring-primary/50",
+        "relative overflow-hidden transition-all hover:shadow-md cursor-pointer h-full flex flex-col",
+        recommended && "ring-2 ring-primary/50",
       )}
       onClick={() => onViewDetails(app)}
     >
       {recommended && (
-        <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-bl-lg">
+        <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-bl-lg">
           Recommended
         </div>
       )}
-      <CardContent className="p-4">
-        <div className="flex items-start gap-4">
-          <img src={app.logo || "/placeholder.svg"} alt={app.name} className="h-14 w-14 rounded-xl" />
+      <CardContent className="p-5 flex flex-col flex-1">
+        <div className="flex items-start gap-4 mb-4">
+          <div className="h-16 w-16 rounded-xl border bg-white flex items-center justify-center flex-shrink-0 shadow-sm">
+            <img src={app.logo || "/placeholder.svg"} alt={app.name} className="h-12 w-12 rounded-lg object-contain" />
+          </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-medium truncate">{app.name}</h3>
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="font-semibold text-base truncate">{app.name}</h3>
               {app.connected && <Check className="h-4 w-4 text-emerald-500 shrink-0" />}
             </div>
-            <p className="text-sm text-muted-foreground truncate">{app.description}</p>
-            <div className="flex items-center gap-3 mt-2">
-              <Badge variant="outline" className="text-xs">
-                <TrendingUp className="mr-1 h-3 w-3" />+{app.creditImpact} pts
-              </Badge>
-              {app.offers.length > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  <Gift className="mr-1 h-3 w-3" />
-                  {app.offers.length} offer{app.offers.length > 1 ? "s" : ""}
-                </Badge>
-              )}
-            </div>
+            <p className="text-sm text-muted-foreground line-clamp-2">{app.description}</p>
           </div>
         </div>
-        <div className="flex gap-2 mt-4" onClick={(e) => e.stopPropagation()}>
+        
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <Badge variant="outline" className="text-xs">
+            <TrendingUp className="mr-1 h-3 w-3" />+{app.creditImpact} pts
+          </Badge>
+          {app.offers.length > 0 && (
+            <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
+              <Gift className="mr-1 h-3 w-3" />
+              {app.offers.length} offer{app.offers.length > 1 ? "s" : ""}
+            </Badge>
+          )}
+        </div>
+        
+        <div className="flex gap-2 mt-auto" onClick={(e) => e.stopPropagation()}>
           {app.connected ? (
             <>
-              <Button variant="outline" size="sm" className="flex-1 bg-transparent" onClick={() => onViewOffers(app)}>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => onViewOffers(app)}>
                 <Gift className="mr-1 h-4 w-4" />
                 View Offers
               </Button>
@@ -1088,7 +1092,7 @@ function AppCard({ app, onConnect, onViewOffers, onViewDetails, recommended }: A
               </Button>
             </>
           ) : (
-            <Button size="sm" className="flex-1" onClick={() => onConnect(app)}>
+            <Button size="sm" className="flex-1 bg-primary hover:bg-primary/90" onClick={() => onConnect(app)}>
               <Plus className="mr-1 h-4 w-4" />
               Connect
             </Button>

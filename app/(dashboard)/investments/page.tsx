@@ -255,7 +255,7 @@ export default function InvestmentsPage() {
   }
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Investments</h1>
@@ -347,7 +347,7 @@ export default function InvestmentsPage() {
         <div className="lg:col-span-2 space-y-8">
             <div>
                 <h2 className="text-xl font-semibold mb-4">Explore Asset Classes</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {investmentCategories.map((category) => (
                         <Link href={`/investments/${category.id}`} key={category.id}>
                             <Card className="h-full hover:shadow-md transition-all cursor-pointer group border-l-4" style={{ borderLeftColor: category.color.replace('bg-', 'var(--') }}>
@@ -373,10 +373,84 @@ export default function InvestmentsPage() {
                     ))}
                 </div>
             </div>
+
+            {/* AI Portfolio Snapshot & Ask AI Investmentor */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>AI Portfolio Snapshot</CardTitle>
+                    <CardDescription>Quick insights from your current holdings</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {topHolding && (
+                      <div className="p-3 rounded-lg bg-muted/40">
+                        <p className="text-xs text-muted-foreground mb-1">Largest Position</p>
+                        <p className="text-sm font-medium">
+                          {topHolding.name} ({topHolding.symbol})
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatCurrency(topHolding.value, "USD")} · {concentration}% of portfolio ·{" "}
+                          {topHolding.gainPercent >= 0 ? "Up" : "Down"}{" "}
+                          {Math.abs(topHolding.gainPercent).toFixed(1)}%
+                        </p>
+                      </div>
+                    )}
+
+                    {topGainers.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-emerald-700 mb-1">Top Gainers (all‑time)</p>
+                        <ul className="space-y-1">
+                          {topGainers.map((h) => (
+                            <li key={h.id} className="flex items-center justify-between text-xs">
+                              <span className="truncate mr-2">
+                                {h.name} ({h.symbol})
+                              </span>
+                              <span className="text-emerald-600 font-semibold">
+                                +{h.gainPercent.toFixed(1)}%
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {topLosers.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-rose-700 mb-1">Biggest Drags</p>
+                        <ul className="space-y-1">
+                          {[...topLosers].reverse().map((h) => (
+                            <li key={h.id} className="flex items-center justify-between text-xs">
+                              <span className="truncate mr-2">
+                                {h.name} ({h.symbol})
+                              </span>
+                              <span className="text-rose-600 font-semibold">
+                                {h.gainPercent.toFixed(1)}%
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <p className="text-xs text-muted-foreground">
+                      These insights are based on your current holdings and unrealized profit/loss. Ask{" "}
+                      <span className="font-medium">AI Investmentor</span> to simulate rebalancing or stress‑test
+                      different market scenarios.
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <AskAIBankerWidget
+                  questions={aiQuestions}
+                  description="Get AI insights on your portfolio"
+                  title="Ask AI Investmentor"
+                  agentId="investmentor"
+                />
+            </div>
         </div>
 
-        {/* Sidebar: Allocation, Insights & AI */}
-        <div className="space-y-6">
+        {/* Right Sidebar: Allocation */}
+        <div className="space-y-6 order-3">
             <Card>
                 <CardHeader>
                     <CardTitle>Allocation</CardTitle>
@@ -424,88 +498,6 @@ export default function InvestmentsPage() {
                     })}
                 </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>AI Portfolio Snapshot</CardTitle>
-                <CardDescription>Quick insights from your current holdings</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {topHolding && (
-                  <div className="p-3 rounded-lg bg-muted/40">
-                    <p className="text-xs text-muted-foreground mb-1">Largest Position</p>
-                    <p className="text-sm font-medium">
-                      {topHolding.name} ({topHolding.symbol})
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatCurrency(topHolding.value, "USD")} · {concentration}% of portfolio ·{" "}
-                      {topHolding.gainPercent >= 0 ? "Up" : "Down"}{" "}
-                      {Math.abs(topHolding.gainPercent).toFixed(1)}%
-                    </p>
-                  </div>
-                )}
-
-                {topGainers.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-emerald-700 mb-1">Top Gainers (all‑time)</p>
-                    <ul className="space-y-1">
-                      {topGainers.map((h) => (
-                        <li key={h.id} className="flex items-center justify-between text-xs">
-                          <span className="truncate mr-2">
-                            {h.name} ({h.symbol})
-                          </span>
-                          <span className="text-emerald-600 font-semibold">
-                            +{h.gainPercent.toFixed(1)}%
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {topLosers.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-rose-700 mb-1">Biggest Drags</p>
-                    <ul className="space-y-1">
-                      {[...topLosers].reverse().map((h) => (
-                        <li key={h.id} className="flex items-center justify-between text-xs">
-                          <span className="truncate mr-2">
-                            {h.name} ({h.symbol})
-                          </span>
-                          <span className="text-rose-600 font-semibold">
-                            {h.gainPercent.toFixed(1)}%
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <p className="text-xs text-muted-foreground">
-                  These insights are based on your current holdings and unrealized profit/loss. Ask{" "}
-                  <span className="font-medium">AI Investmentor</span> to simulate rebalancing or stress‑test
-                  different market scenarios.
-                </p>
-              </CardContent>
-            </Card>
-
-            <AskAIBankerWidget
-              questions={aiQuestions}
-              description="Get AI insights on your portfolio"
-              title="Ask AI Investmentor"
-              agentId="investmentor"
-            />
-
-            <AskAIBankerWidget
-              questions={[
-                "What are analysts saying about NVIDIA this week?",
-                "Summarize the latest macro headwinds for tech stocks",
-                "Compare Apple and Microsoft valuation multiples",
-              ]}
-              description="Live market intel powered by Perplexity"
-              title="Ask AI Research Analyst"
-              agentId="researcher"
-            />
         </div>
       </div>
     </div>

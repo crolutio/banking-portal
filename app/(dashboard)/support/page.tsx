@@ -191,9 +191,10 @@ export default function SupportPage() {
   // AI Banker questions relevant to support page
   const aiQuestions = [
     "How do I dispute a transaction?",
-    "What's the status of my complaint?",
-    "How do I contact customer service?",
+    "What's the status of my support ticket?",
+    "How can I contact customer service?",
     "What are your support hours?",
+    "Help me with a banking issue",
   ]
 
   return (

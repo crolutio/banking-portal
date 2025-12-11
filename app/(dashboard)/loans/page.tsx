@@ -141,11 +141,11 @@ export default function LoansPage() {
   const lendingPolicy = policies.find((p) => p.category === "lending")
 
   const aiQuestions = [
-    "Am I eligible for a personal loan?",
-    "What's my debt-to-income ratio?",
-    "How can I pay off my loan faster?",
-    "Should I refinance my mortgage at current rates?",
-    "Compare my loan interest rates to market",
+    "What loan options am I eligible for?",
+    "How can I reduce my loan payments?",
+    "Should I refinance my current loan?",
+    "What's the best way to pay off my debt?",
+    "Compare my loan rates to current market rates",
   ]
 
   if (isLoading) {

@@ -843,10 +843,10 @@ export default function SavingsGoalsPage() {
   }
 
   const aiQuestions = [
-    "How can I reach my goal faster?",
-    "Am I on track with my savings?",
-    "What's the best savings strategy for me?",
-    "How much should I save monthly?",
+    "How can I accelerate my savings goal?",
+    "Am I saving enough to reach my target?",
+    "What's the best strategy for my savings goal?",
+    "Should I adjust my monthly savings amount?",
   ]
 
   if (isLoading) {

@@ -45,6 +45,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { cn } from "@/lib/utils"
 import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
+import { useFloatingChat } from "@/components/ai/floating-chat-context"
 
 interface ConnectedApp {
   id: string
@@ -562,6 +563,7 @@ const connectedApps: ConnectedApp[] = [
 ]
 
 export default function MarketplacePage() {
+  const { openChatWithMessage } = useFloatingChat()
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedApp, setSelectedApp] = useState<ConnectedApp | null>(null)
@@ -638,10 +640,10 @@ export default function MarketplacePage() {
   }
 
   const aiQuestions = [
-    "How do connected apps boost my credit?",
-    "Which apps have the best offers?",
-    "Is my data safe when connecting apps?",
-    "How do I disconnect an app?",
+    "Which apps should I connect to boost my credit?",
+    "What exclusive offers are available?",
+    "How secure is my data with connected apps?",
+    "How do I manage my connected apps?",
   ]
 
   return (
@@ -693,11 +695,11 @@ export default function MarketplacePage() {
               </div>
             </div>
             <div className="flex flex-col gap-2">
-              <Button>
+              <Button onClick={() => openChatWithMessage(`Explain how my connected apps are boosting my credit score. I have ${connectedAppsCount} apps connected with a total credit impact of +${totalCreditImpact} points.`)}>
                 <Sparkles className="mr-2 h-4 w-4" />
                 View Credit Impact
               </Button>
-              <Button variant="ghost" size="sm" className="text-xs">
+              <Button variant="ghost" size="sm" className="text-xs" onClick={() => openChatWithMessage("How does my credit score from connected apps affect my loan eligibility and interest rates?")}>
                 <Info className="mr-1 h-3 w-3" />
                 How this affects loans
               </Button>

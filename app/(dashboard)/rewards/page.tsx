@@ -188,10 +188,10 @@ export default function RewardsPage() {
   }
 
   const aiQuestions = [
-    "How do I earn more points?",
-    "What rewards can I afford?",
-    "When do my points expire?",
-    "Show me travel rewards",
+    "How can I maximize my reward points?",
+    "What rewards are best value for my points?",
+    "When will my points expire?",
+    "Show me the best redemption options",
   ]
 
   if (isLoading) {

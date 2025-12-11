@@ -369,11 +369,11 @@ export default function CardsPage() {
 
   // AI Banker questions relevant to cards page
   const aiQuestions = [
-    "Where am I overspending this month?",
-    "Which subscriptions can I cancel?",
-    "Analyze my restaurant spending trend",
-    "What are my card benefits?",
-    "Compare my spending vs last month",
+    "Which card should I use for my next purchase?",
+    "How can I maximize my card rewards?",
+    "Analyze my card spending patterns",
+    "What are my available card benefits?",
+    "Compare my card usage across different cards",
   ]
 
   if (isLoading) {

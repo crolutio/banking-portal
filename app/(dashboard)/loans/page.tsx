@@ -47,6 +47,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
+import { useFloatingChat } from "@/components/ai/floating-chat-context"
 import { useRole } from "@/lib/role-context"
 import { createClient } from "@/lib/supabase/client"
 import type { Loan, LoanOffer } from "@/lib/types"
@@ -61,6 +62,7 @@ const loanTypeIcons: Record<string, React.ElementType> = {
 
 export default function LoansPage() {
   const { currentUser } = useRole()
+  const { openChatWithMessage } = useFloatingChat()
   const [activeTab, setActiveTab] = useState("my-loans")
   const [selectedOffer, setSelectedOffer] = useState<LoanOffer | null>(null)
   const [simulatorAmount, setSimulatorAmount] = useState(50000)
@@ -248,10 +250,19 @@ export default function LoansPage() {
                             </p>
                           </div>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => openChatWithMessage(`Can you show me the payment schedule for my ${loan.type.replace("_", " ")} loan? The original amount was ${formatCurrency(loan.amount, "AED")}, interest rate is ${loan.interestRate}%, term is ${loan.term} months, and remaining balance is ${formatCurrency(loan.remainingBalance, "AED")}.`)}
+                            >
                               View Schedule
                             </Button>
-                            <Button size="sm">Make Payment</Button>
+                            <Button 
+                              size="sm"
+                              onClick={() => openChatWithMessage(`I want to make a payment for my ${loan.type.replace("_", " ")} loan. The next payment is ${formatCurrency(loan.monthlyPayment, "AED")} due on ${loan.nextPaymentDate}. Remaining balance is ${formatCurrency(loan.remainingBalance, "AED")}.`)}
+                            >
+                              Make Payment
+                            </Button>
                           </div>
                         </div>
                       </CardContent>

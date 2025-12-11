@@ -890,7 +890,7 @@ export default function MarketplacePage() {
                   </div>
                 </div>
               </SheetHeader>
-              <div className="mt-6 space-y-6">
+              <div className="mt-6 px-4 space-y-6">
                 {selectedApp.connected ? (
                   <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4">
                     <div className="flex items-center gap-2 mb-2">
@@ -1000,7 +1000,7 @@ export default function MarketplacePage() {
                 <SheetTitle>{selectedAppOffers.name} Offers</SheetTitle>
                 <SheetDescription>Exclusive offers available for Bank of the Future customers</SheetDescription>
               </SheetHeader>
-              <div className="mt-6 space-y-4">
+              <div className="mt-6 px-4 space-y-4">
                 {selectedAppOffers.offers.map((offer) => (
                   <Card key={offer.id}>
                     <CardContent className="p-4">

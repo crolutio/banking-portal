@@ -437,7 +437,7 @@ export default function CardsPage() {
                     <SheetDescription>Manage your card and view insights</SheetDescription>
                   </SheetHeader>
 
-                  <div className="mt-6 space-y-6">
+                  <div className="mt-6 px-4 space-y-6">
                     <CreditCardVisual card={card} showDetails />
 
                     <div className="p-4 rounded-lg bg-muted/30">

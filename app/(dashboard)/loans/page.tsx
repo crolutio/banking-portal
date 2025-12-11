@@ -337,7 +337,7 @@ export default function LoansPage() {
                               </SheetDescription>
                             </SheetHeader>
 
-                            <div className="py-6 space-y-6">
+                            <div className="py-6 px-4 space-y-6">
                               {/* Application Stepper */}
                               <div className="flex items-center justify-between mb-6">
                                 {[1, 2, 3].map((step) => (

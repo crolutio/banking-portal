@@ -488,7 +488,7 @@ function Client360View({
                   <SheetTitle>AI Meeting Brief</SheetTitle>
                   <SheetDescription>AI-generated summary for your next meeting with {client.name}</SheetDescription>
                 </SheetHeader>
-                <div className="py-6 space-y-6">
+                <div className="py-6 px-4 space-y-6">
                   <div className="p-4 rounded-lg bg-muted/50">
                     <h4 className="font-medium mb-2">Client Overview</h4>
                     <p className="text-sm text-muted-foreground">

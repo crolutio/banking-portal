@@ -103,12 +103,6 @@ export function DisputeConfirmationCard({ data }: DisputeConfirmationCardProps) 
               <li>• Temporary credits may be issued while we investigate</li>
             </ul>
           </div>
-
-          {/* Action Button */}
-          <Button variant="outline" className="w-full" size="sm">
-            <FileText className="h-4 w-4 mr-2" />
-            View Dispute Status
-          </Button>
         </div>
       </CardContent>
     </Card>

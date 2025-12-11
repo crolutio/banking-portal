@@ -712,7 +712,7 @@ export default function AccountsPage() {
                     <SheetDescription>Account details and insights</SheetDescription>
                   </SheetHeader>
 
-                  <div className="mt-6 space-y-6">
+                  <div className="mt-6 px-4 space-y-6">
                     <div className="p-4 rounded-lg bg-muted/30">
                       <div className="grid grid-cols-2 gap-4">
                         <div>

@@ -370,7 +370,7 @@ export default function RewardsPage() {
                 <SheetDescription>Confirm your selection</SheetDescription>
             </SheetHeader>
             {selectedReward && (
-                <div className="mt-6 space-y-6">
+                <div className="mt-6 px-4 space-y-6">
                     <div>
                         <h3 className="text-xl font-bold">{selectedReward.name}</h3>
                         <p className="text-muted-foreground mt-2">{selectedReward.description}</p>

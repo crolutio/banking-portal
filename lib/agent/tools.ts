@@ -35,20 +35,20 @@ async function fetchUserLoans(userId: string): Promise<Loan[]> {
 
 async function fetchUserTransactionsForAccounts(
   accountIds: string[],
-  days: number,
+  days?: number,
 ): Promise<Transaction[]> {
   if (accountIds.length === 0) return []
 
   const supabase = createDirectClient()
-  const since = new Date()
-  since.setDate(since.getDate() - days)
+  let query = supabase.from("transactions").select("*").in("account_id", accountIds)
 
-  const { data, error } = await supabase
-    .from("transactions")
-    .select("*")
-    .in("account_id", accountIds)
-    .gte("date", since.toISOString())
-    .order("date", { ascending: false })
+  if (typeof days === "number" && Number.isFinite(days) && days > 0) {
+    const since = new Date()
+    since.setDate(since.getDate() - days)
+    query = query.gte("date", since.toISOString())
+  }
+
+  const { data, error } = await query.order("date", { ascending: false })
 
   if (error) {
     console.error("[agent/tools] Error fetching transactions:", error.message)
@@ -113,7 +113,7 @@ export interface RecentTransactionsResult {
 
 export async function getRecentTransactions(
   userId: string,
-  days: number = 30,
+  days: number = 365,
 ): Promise<RecentTransactionsResult> {
   const accounts = await fetchUserAccounts(userId)
   const accountIds = accounts.map((a) => a.id)
@@ -149,7 +149,7 @@ export interface SpendingAnalysisResult {
 }
 
 export async function analyzeSpending(userId: string): Promise<SpendingAnalysisResult> {
-  const { transactions } = await getRecentTransactions(userId, 90)
+  const { transactions } = await getRecentTransactions(userId, 730)
 
   const forecasts = generateForecasts(transactions)
   const totalPredictedSpend = forecasts.reduce((sum, f) => sum + f.predictedAmount, 0)

@@ -436,261 +436,143 @@ Deno.serve(async (req: Request) => {
 
     console.log("[vapi-data-handler] Processing:", { userMessage, userId })
 
-    // --- C. PRE-ANALYSIS STEP: Understand intent BEFORE calling tools ---
-    let needsTools = true
-    let directAnswer: string | null = null
-
-    if (geminiApiKey) {
-      const analysisPrompt = `
-You are an intent analyzer for "Bank of the Future" banking assistant.
-
-The user asked:
-"${userMessage}"
-
-Analyze this question and determine:
-
-1. Is this a question about the user's banking data (accounts, transactions, spending, loans)?
-   - Examples that NEED tools: "What's my balance?", "How much did I spend?", "Can I get a loan?"
-   - Examples that DON'T need tools: "Hello", "What can you do?", "Tell me about loans in general"
-
-2. Is this a conversational/general question that doesn't require database access?
-   - Examples: Greetings, general banking questions, travel questions (like "loan to Japan" means travel, not financial loan)
-
-3. Are there any ambiguous phrases that need clarification?
-   - "loan to Japan" = travel question, answer directly without calling loan tool
-   - "loan for 50,000" = financial loan question, needs loan tool
-
-Respond ONLY with valid JSON in this exact format:
-{
-  "needsTools": true or false,
-  "directAnswer": "If needsTools is false, provide a helpful direct answer here. Otherwise null.",
-  "reasoning": "Brief explanation of why tools are or aren't needed"
-}
-
-If needsTools is false, provide a helpful, conversational answer directly. If true, return null for directAnswer.
-`
-
-      try {
-        const analysisResult = await callGemini(analysisPrompt, geminiApiKey)
-        const analysisJson = stripJson(analysisResult)
-        const analysis = JSON.parse(analysisJson)
-        
-        if (analysis.needsTools === false && analysis.directAnswer) {
-          needsTools = false
-          directAnswer = analysis.directAnswer
-          console.log("[vapi-data-handler] Pre-analysis determined no tools needed:", analysis.reasoning)
-        } else {
-          console.log("[vapi-data-handler] Pre-analysis determined tools needed:", analysis.reasoning)
-        }
-      } catch (err) {
-        console.warn("[vapi-data-handler] Pre-analysis failed, proceeding with tools:", err)
-        // Continue with tools if analysis fails
-      }
-    }
-
-    // If we have a direct answer, return it immediately without calling tools
-    if (!needsTools && directAnswer) {
-      const toolCall = body.message?.toolCalls?.[0]
-      
-      if (toolCall) {
-        return new Response(JSON.stringify({
-          results: [{
-            toolCallId: toolCall.id,
-            result: directAnswer
-          }]
-        }), {
-          headers: { 'Content-Type': 'application/json' }
-        })
-      } else {
-        return new Response(JSON.stringify({
-          answer: directAnswer,
-          toolCalls: [],
-          toolResults: {},
-        }), {
-          headers: { 'Content-Type': 'application/json' }
-        })
-      }
-    }
-
-    // --- D. PLANNING STEP: Use Gemini to decide which tools to call ---
-    let toolCalls: Array<{ name: string; args: any }> = []
-
-    if (geminiApiKey) {
-      const plannerPrompt = `
-You are a planning agent for "Bank of the Future".
-
-The user asked:
-"${userMessage}"
-
-You have access to these tools:
-
-1) getAccountsOverview
-   - description: Get all of the user's accounts, balances, and total cash.
-   - args: { "userId": string }
-
-2) getRecentTransactions
-   - description: Get recent transactions and spending/income totals for a time window.
-   - args: { "userId": string, "days": number }  // days defaults to 30 if omitted, or omit for all transactions
-
-3) analyzeSpending
-   - description: Analyze spending patterns, forecasts, and savings opportunities.
-   - args: { "userId": string }
-
-4) analyzeLoanPreapprovalForUser
-   - description: Analyze whether the user can afford a requested loan and compute monthly payment, DTI, and strengths/concerns.
-   - args: { "userId": string, "requestedAmount": number, "requestedTerm": number, "creditScore": number (optional, defaults to 700) }
-
-Your job:
-- Choose the minimal set of tools needed to answer the question well.
-- If the question is very general ("how is my spending?"), you might call getRecentTransactions and analyzeSpending.
-- If the user is asking about FINANCIAL loans (e.g., "loan for 50,000 AED"), call analyzeLoanPreapprovalForUser with a reasonable requestedAmount and requestedTerm inferred from the question.
-- IMPORTANT: Do NOT call loan tools for travel questions (e.g., "loan to Japan" means travel, not a financial loan). Return empty toolCalls for non-financial questions.
-- If the question is purely general knowledge, conversational, or not about the user's banking data, return an empty list of tool calls.
-
-IMPORTANT:
-- Always include "userId" in every tool call with value "${userId}".
-- Respond ONLY with valid JSON, no explanations, in this exact shape:
-
-{
-  "toolCalls": [
-    { "name": "getAccountsOverview", "args": { "userId": "${userId}" } },
-    { "name": "getRecentTransactions", "args": { "userId": "${userId}", "days": 30 } }
-  ]
-}
-`
-
-      try {
-        const rawPlan = await callGemini(plannerPrompt, geminiApiKey)
-        const jsonText = stripJson(rawPlan)
-        const parsed = JSON.parse(jsonText)
-        if (Array.isArray(parsed.toolCalls)) {
-          toolCalls = parsed.toolCalls
-        }
-      } catch (err) {
-        console.warn("[vapi-data-handler] Failed to parse planning JSON, falling back to default plan.", err)
-      }
-    }
-
-    // Fallback: simple default plan based on keywords
-    if (toolCalls.length === 0) {
-      const lowerQ = userMessage.toLowerCase()
-      if (lowerQ.includes("loan") || lowerQ.includes("borrow")) {
-        const amountMatch = userMessage.match(/(\d+)[,\s]*(?:000|k|thousand)/i)
-        const termMatch = userMessage.match(/(\d+)\s*(?:month|year)/i)
-        toolCalls = [{
-          name: "analyzeLoanPreapprovalForUser",
-          args: {
-            userId,
-            requestedAmount: amountMatch ? Number(amountMatch[1]) * 1000 : 50000,
-            requestedTerm: termMatch ? Number(termMatch[1]) : 24,
-          }
-        }]
-      } else if (lowerQ.includes("spend") || lowerQ.includes("saving") || lowerQ.includes("expense") || lowerQ.includes("transaction")) {
-        toolCalls = [
-          { name: "getRecentTransactions", args: { userId } },
-          { name: "analyzeSpending", args: { userId } },
-        ]
-      } else {
-        toolCalls = [{ name: "getAccountsOverview", args: { userId } }]
-      }
-    }
-
-    // Ensure userId is present in all tool calls
-    toolCalls = toolCalls.map((call) => ({
-      ...call,
-      args: { ...(call.args || {}), userId: call.args?.userId || userId },
-    }))
-
-    // --- E. EXECUTE TOOLS ---
-    const results: Record<string, any> = {}
+    // --- C. FETCH ALL DATA (like the Next.js chat agent does) ---
+    console.log(`[vapi-data-handler] Fetching all data for user: ${userId}`)
     
-    for (const call of toolCalls) {
-      try {
-        console.log(`[vapi-data-handler] Executing tool: ${call.name}`, call.args)
-        if (call.name === "getAccountsOverview") {
-          results.getAccountsOverview = await getAccountsOverview(supabase, call.args.userId)
-        } else if (call.name === "getRecentTransactions") {
-          results.getRecentTransactions = await getRecentTransactions(supabase, call.args.userId, call.args.days)
-        } else if (call.name === "analyzeSpending") {
-          results.analyzeSpending = await analyzeSpending(supabase, call.args.userId)
-        } else if (call.name === "analyzeLoanPreapprovalForUser") {
-          results.analyzeLoanPreapprovalForUser = await analyzeLoanPreapprovalForUser(
-            supabase,
-            call.args.userId,
-            call.args.requestedAmount || 50000,
-            call.args.requestedTerm || 24,
-            call.args.creditScore || 700,
-          )
-        }
-        console.log(`[vapi-data-handler] Tool ${call.name} completed`)
-      } catch (err) {
-        console.error(`[vapi-data-handler] Tool ${call.name} failed:`, err)
-        results[call.name] = { error: String(err) }
+    // Fetch Accounts first (needed for transactions)
+    const accounts = await fetchTableByUser(supabase, "accounts", userId)
+    const accountIds = accounts.map((a: any) => a.id)
+    
+    // Fetch other data in parallel
+    const [
+      cards,
+      loans,
+      holdings,
+      watchlist,
+      goals,
+      rewardProfileResult,
+      rewardActivities,
+      supportTickets
+    ] = await Promise.all([
+      fetchTableByUser(supabase, "cards", userId),
+      fetchTableByUser(supabase, "loans", userId),
+      fetchTableByUser(supabase, "portfolio_holdings", userId),
+      fetchTableByUser(supabase, "watchlist", userId),
+      fetchTableByUser(supabase, "savings_goals", userId),
+      fetchTableByUser(supabase, "reward_profiles", userId),
+      fetchTableByUser(supabase, "reward_activities", userId),
+      fetchTableByUser(supabase, "support_tickets", userId)
+    ])
+
+    // Fetch Transactions (using account IDs)
+    let transactions: any[] = []
+    if (accountIds.length > 0) {
+      const { data: txData, error: txError } = await supabase
+        .from("transactions")
+        .select("*")
+        .in("account_id", accountIds)
+        .order("date", { ascending: false })
+      
+      if (!txError && txData) {
+        transactions = txData
+      } else if (txError) {
+        console.error("[vapi-data-handler] Error fetching transactions:", txError.message)
       }
     }
 
-    // --- F. GENERATE NATURAL LANGUAGE ANSWER ---
+    // Fetch Goal Transactions
+    let goalTransactions: any[] = []
+    const goalIds = goals.map((g: any) => g.id)
+    if (goalIds.length > 0) {
+      const { data: gTxData, error: gTxError } = await supabase
+        .from("savings_goal_transactions")
+        .select("*")
+        .in("goal_id", goalIds)
+        .order("date", { ascending: false })
+        
+      if (!gTxError && gTxData) {
+        goalTransactions = gTxData
+      }
+    }
+
+    const rewardProfile = rewardProfileResult.length > 0 ? rewardProfileResult[0] : null
+
+    console.log(`[vapi-data-handler] Data fetched: Accounts=${accounts.length}, Tx=${transactions.length}, Cards=${cards.length}, Loans=${loans.length}, Holdings=${holdings.length}, Goals=${goals.length}`)
+
+    // --- D. GENERATE ANSWER WITH GEMINI (using all the data, like chat agent) ---
     let resultMessage = ""
     
-    // If no tools were called, generate a conversational answer
-    if (toolCalls.length === 0) {
-      if (geminiApiKey) {
-        const conversationalPrompt = `
-You are the "Bank of the Future" AI banking assistant.
-
-The user asked: "${userMessage}"
-
-This question doesn't require accessing their banking data. Provide a helpful, conversational answer.
-
-Examples:
-- If they said "loan to Japan" (travel), explain you can help with travel planning or travel loans if needed.
-- If they're greeting you, greet them back and offer to help with banking questions.
-- If they're asking general questions, provide helpful information.
-
-Keep it brief, friendly, and professional. 1-2 sentences maximum for voice.
-`
-        try {
-          resultMessage = await callGemini(conversationalPrompt, geminiApiKey)
-        } catch (err) {
-          console.error("[vapi-data-handler] Conversational answer generation failed:", err)
-          resultMessage = "I'm here to help with your banking questions. You can ask me about your accounts, transactions, spending, or loans."
-        }
-      } else {
-        resultMessage = "I'm here to help with your banking questions. You can ask me about your accounts, transactions, spending, or loans."
-      }
-    } else if (geminiApiKey) {
-      // Tools were called, synthesize answer from results
-      const answerPrompt = `
+    if (geminiApiKey) {
+      // Generate answer using Gemini with all the data (like chat agent does)
+      const systemPrompt = `
 You are the "Bank of the Future" AI banking assistant speaking to a user via voice.
 
 User ID: ${userId}
-The user asked: "${userMessage}"
 
-Tool results:
-${JSON.stringify(results, null, 2)}
+You have access to the user's complete financial data. Answer their question using ONLY the data provided below.
 
-TASK:
-- Provide a SHORT, concise answer that can be spoken aloud (1-3 sentences maximum).
-- This is for voice interaction - keep it brief to avoid long pauses.
-- Use the numbers and facts from the tool results; do not invent data.
-- If tool results show empty arrays or zero values, briefly say you couldn't find account information.
-- If data exists, mention only the most relevant numbers or facts that directly answer the question.
-- Format currency as "AED X,XXX" when mentioning amounts (no decimals for voice).
-- Keep the tone professional but friendly.
-- DO NOT include markdown, bullet points, code blocks, or long explanations. Just 1-3 short sentences.
-- Example: "Your total balance is 15,000 AED across 2 accounts." NOT "You have multiple accounts with various balances totaling..."
+FINANCIAL DATA:
+
+1. ACCOUNTS:
+${JSON.stringify(accounts.map((a: any) => ({ id: a.id, name: a.name, type: a.type, balance: a.balance, available_balance: a.available_balance, currency: a.currency })))}
+
+2. CARDS:
+${JSON.stringify(cards.map((c: any) => ({ id: c.id, type: c.type, last4: c.last4, expiry: c.expiry, status: c.status, limit: c.limit })))}
+
+3. LOANS:
+${JSON.stringify(loans.map((l: any) => ({ id: l.id, type: l.type, amount: l.amount, remaining: l.remaining, interest_rate: l.interest_rate, monthly_payment: l.monthly_payment, status: l.status })))}
+
+4. RECENT TRANSACTIONS (Last 50 of ${transactions.length}):
+${JSON.stringify(transactions.slice(0, 50).map((tx: any) => ({ date: tx.date, description: tx.description, amount: tx.amount, type: tx.type, category: tx.category, is_unusual: tx.is_unusual, unusual_reason: tx.unusual_reason })))}
+
+5. INVESTMENT PORTFOLIO:
+${JSON.stringify(holdings.map((h: any) => ({ symbol: h.symbol, name: h.name, quantity: h.quantity, current_price: h.current_price, total_value: h.total_value })))}
+
+6. SAVINGS GOALS:
+${JSON.stringify(goals.map((g: any) => ({ id: g.id, name: g.name, target: g.target, current: g.current, deadline: g.deadline, status: g.status })))}
+
+7. REWARDS:
+- Profile: ${JSON.stringify(rewardProfile ? { tier: rewardProfile.tier, points: rewardProfile.points, next_tier: rewardProfile.next_tier } : null)}
+- Recent Activity: ${JSON.stringify(rewardActivities.slice(0, 5).map((a: any) => ({ date: a.date, description: a.description, points: a.points })))}
+
+8. SUPPORT TICKETS:
+${JSON.stringify(supportTickets.slice(0, 5).map((t: any) => ({ id: t.id, subject: t.subject, status: t.status, created_at: t.created_at })))}
+
+GUIDELINES:
+- Answer based ONLY on the provided data.
+- Provide a SHORT, concise answer (1-3 sentences maximum) for voice interaction.
+- Keep it brief to avoid long pauses.
+- Format currency as "AED X,XXX" (no decimals for voice).
+- If asked about something not in the data, say you don't have that information.
+- Transaction types: "credit" = income/deposits, "debit" = spending/withdrawals.
+- Current Date: ${new Date().toISOString().split('T')[0]}
+- Be professional but friendly.
+- DO NOT include markdown, bullet points, or code blocks. Plain text sentences only.
 `
+
       try {
-        resultMessage = await callGemini(answerPrompt, geminiApiKey)
+        resultMessage = await callGemini(`${systemPrompt}\n\nThe user asked: "${userMessage}"\n\nProvide a short answer (1-3 sentences):`, geminiApiKey)
       } catch (err) {
         console.error("[vapi-data-handler] Gemini call failed:", err)
-        resultMessage = formatSimpleResponse(results, userId)
+        // Fallback: simple response
+        if (accounts.length > 0) {
+          const total = accounts.reduce((sum: number, acc: any) => sum + toNumber(acc.balance), 0)
+          resultMessage = `Your total balance is ${total.toLocaleString()} AED across ${accounts.length} account${accounts.length > 1 ? 's' : ''}.`
+        } else {
+          resultMessage = "I couldn't find your account information."
+        }
       }
     } else {
-      resultMessage = formatSimpleResponse(results, userId)
+      // Fallback if no Gemini API key
+      if (accounts.length > 0) {
+        const total = accounts.reduce((sum: number, acc: any) => sum + toNumber(acc.balance), 0)
+        resultMessage = `Your total balance is ${total.toLocaleString()} AED across ${accounts.length} account${accounts.length > 1 ? 's' : ''}.`
+      } else {
+        resultMessage = "I couldn't find your account information."
+      }
     }
 
-    // --- G. FORMAT RESPONSE FOR VAPI ---
+    // --- E. FORMAT RESPONSE FOR VAPI ---
     const toolCall = body.message?.toolCalls?.[0]
     
     if (toolCall) {
@@ -710,8 +592,6 @@ TASK:
       // Direct API call format (for testing or direct HTTP calls)
       return new Response(JSON.stringify({
         answer: resultMessage,
-        toolCalls,
-        toolResults: results,
       }), {
         headers: { 'Content-Type': 'application/json' }
       })

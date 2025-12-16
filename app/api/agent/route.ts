@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { GoogleGenerativeAI } from "@google/generative-ai"
+import { createDirectClient } from "@/lib/supabase/direct-client"
 import {
   getAccountsOverview,
   getRecentTransactions,
@@ -8,6 +9,26 @@ import {
 } from "@/lib/agent/tools"
 
 export const runtime = "nodejs"
+
+// Helper to safely fetch data from any Supabase table
+async function fetchData(table: string, userId: string, column = "user_id") {
+  const supabase = createDirectClient()
+  try {
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .eq(column, userId)
+    
+    if (error) {
+      console.error(`[agent] Error fetching ${table}:`, error.message)
+      return []
+    }
+    return data || []
+  } catch (err) {
+    console.error(`[agent] Exception fetching ${table}:`, err)
+    return []
+  }
+}
 
 type ToolCall = {
   name: string
@@ -98,258 +119,135 @@ export async function POST(req: Request) {
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY)
     const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
 
-    // Fast keyword-based tool selection (skip Gemini planning for common queries)
-    const lowerQ = question.toLowerCase()
-    let toolCalls: ToolCall[] = []
-    let skipPlanning = false
-
-    // Quick keyword matching for common queries (much faster than Gemini planning)
-    if (lowerQ.includes("balance") || lowerQ.includes("account") || lowerQ.includes("money") || lowerQ.includes("cash")) {
-      toolCalls = [{ name: "getAccountsOverview", args: { userId } }]
-      skipPlanning = true
-    } else if (lowerQ.includes("loan") && (lowerQ.includes("afford") || lowerQ.includes("eligib") || lowerQ.includes("preapprov") || /\d+/.test(question))) {
-      // Only use loan tool if it's clearly a financial loan question
-      const amountMatch = question.match(/(\d+)[,\s]*(?:000|k|thousand)/i)
-      const termMatch = question.match(/(\d+)\s*(?:month|year)/i)
-      toolCalls = [{
-        name: "analyzeLoanPreapprovalForUser",
-        args: {
-          userId,
-          requestedAmount: amountMatch ? Number(amountMatch[1]) * 1000 : 50000,
-          requestedTerm: termMatch ? Number(termMatch[1]) : 24,
-        }
-      }]
-      skipPlanning = true
-    } else if (lowerQ.includes("spend") || lowerQ.includes("saving") || lowerQ.includes("expense") || lowerQ.includes("transaction")) {
-      toolCalls = [
-        { name: "getRecentTransactions", args: { userId } },
-        { name: "analyzeSpending", args: { userId } },
-      ]
-      skipPlanning = true
-    }
-
     // -----------------------------------------------------------------------
-    // 1) PLANNING STEP: Use Gemini only if keyword matching didn't work
+    // 1) FETCH ALL DATA (like the chat agent does)
     // -----------------------------------------------------------------------
-
-    if (!skipPlanning) {
-      const plannerPrompt = `
-You are a planning agent for "Bank of the Future".
-
-The user asked:
-"${question}"
-
-You have access to these tools:
-
-1) getAccountsOverview
-   - description: Get all of the user's accounts, balances, and total cash.
-   - args: { "userId": string }
-
-2) getRecentTransactions
-   - description: Get recent transactions and spending/income totals for a time window.
-   - args: { "userId": string, "days": number }  // days defaults to 30 if omitted
-
-3) analyzeSpending
-   - description: Analyze spending patterns, forecasts, and savings opportunities using the last ~90 days.
-   - args: { "userId": string }
-
-4) analyzeLoanPreapprovalForUser
-   - description: Analyze whether the user can afford a requested loan and compute monthly payment, DTI, and strengths/concerns.
-   - args: { "userId": string, "requestedAmount": number, "requestedTerm": number }
-
-Your job:
-- Choose the minimal set of tools needed to answer the question well.
-- If the question is very general ("how is my spending?"), you might call getRecentTransactions and analyzeSpending.
-- If the user is asking about loans, call analyzeLoanPreapprovalForUser with a reasonable requestedAmount and requestedTerm inferred from the question (e.g. 50000 AED, 24 months if not specified).
-- If the question is purely general knowledge and not about the user's banking data, you may return an empty list of tool calls.
-
-IMPORTANT:
-- Always include "userId" in every tool call.
-- Respond ONLY with valid JSON, no explanations, in this exact shape:
-
-{
-  "toolCalls": [
-    { "name": "getAccountsOverview", "args": { "userId": "..." } },
-    { "name": "getRecentTransactions", "args": { "userId": "...", "days": 30 } }
-  ]
-}
-`
-
-    const planResult = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: plannerPrompt }],
-        },
-      ],
-    })
-
-    const rawPlan = planResult.response.text()
-    let toolCalls: ToolCall[] = []
-
-    try {
-      const jsonText = stripJson(rawPlan)
-      const parsed = JSON.parse(jsonText)
-      if (Array.isArray(parsed.toolCalls)) {
-        toolCalls = parsed.toolCalls as ToolCall[]
-      }
-    } catch (err) {
-      console.warn("[agent] Failed to parse planning JSON, falling back to default plan.", err)
-      // Fallback: simple default plan based on keywords
-      const lowerQ = question.toLowerCase()
-      if (lowerQ.includes("loan")) {
-        toolCalls = [
-          {
-            name: "analyzeLoanPreapprovalForUser",
-            args: {
-              userId,
-              requestedAmount: 50000,
-              requestedTerm: 24,
-            },
-          },
-        ]
-      } else if (
-        lowerQ.includes("spend") ||
-        lowerQ.includes("saving") ||
-        lowerQ.includes("expense")
-      ) {
-        toolCalls = [
-          { name: "getRecentTransactions", args: { userId, days: 30 } },
-          { name: "analyzeSpending", args: { userId } },
-        ]
-      } else {
-        toolCalls = [{ name: "getAccountsOverview", args: { userId } }]
-      }
-    }
-
-    // Ensure userId is present
-    toolCalls = toolCalls.map((call) => ({
-      ...call,
-      args: { ...(call.args || {}), userId: (call.args && call.args.userId) || userId },
-    }))
-
-    // -----------------------------------------------------------------------
-    // 2) EXECUTION STEP: run the selected tools
-    // -----------------------------------------------------------------------
-
-    const results: Record<string, any> = {}
-
-    for (const call of toolCalls) {
-      const name = call.name
-      const args = call.args || {}
-
-      try {
-        console.log(`[agent] Executing tool: ${name} with args:`, args)
-        if (name === "getAccountsOverview") {
-          results[name] = await getAccountsOverview(args.userId)
-        } else if (name === "getRecentTransactions") {
-          results[name] = await getRecentTransactions(args.userId, args.days ?? 30)
-        } else if (name === "analyzeSpending") {
-          results[name] = await analyzeSpending(args.userId)
-        } else if (name === "analyzeLoanPreapprovalForUser") {
-          const requestedAmount = Number(args.requestedAmount || 50000)
-          const requestedTerm = Number(args.requestedTerm || 24)
-          results[name] = await analyzeLoanPreapprovalForUser(
-            args.userId,
-            requestedAmount,
-            requestedTerm,
-          )
-        }
-        console.log(`[agent] Tool ${name} result:`, JSON.stringify(results[name], null, 2).slice(0, 500))
-      } catch (toolError) {
-        console.error(`[agent] Tool ${name} failed:`, toolError)
-        results[name] = { error: String(toolError) }
-      }
-    }
-
-    // -----------------------------------------------------------------------
-    // 3) ANSWERING STEP: Fast formatting for simple queries, Gemini for complex ones
-    // -----------------------------------------------------------------------
-
-    // Check if we have any meaningful data
-    const hasData = Object.values(results).some((r: any) => {
-      if (!r || typeof r !== 'object') return false
-      if (r.error) return false
-      if (r.accounts && r.accounts.length > 0) return true
-      if (r.transactions && r.transactions.length > 0) return true
-      if (r.totalBalance !== undefined && r.totalBalance > 0) return true
-      return false
-    })
-
-    console.log(`[agent] Has data: ${hasData}`, {
-      resultKeys: Object.keys(results),
-      hasAccounts: results.getAccountsOverview?.accounts?.length > 0,
-      hasTransactions: results.getRecentTransactions?.transactions?.length > 0,
-    })
-
-    // Fast answer formatting for simple queries (saves ~1-2 seconds)
-    let answer: string
-    const lowerQ = question.toLowerCase()
-    const isSimpleQuery = lowerQ.includes("balance") || lowerQ.includes("account") || lowerQ.includes("money") || lowerQ.includes("cash") || lowerQ.includes("how much")
+    console.log(`[agent] Fetching all data for user: ${userId}`)
     
-    if (isSimpleQuery && results.getAccountsOverview) {
-      // Fast formatting for balance queries (short for voice)
-      const overview = results.getAccountsOverview
-      if (!hasData || !overview.accounts || overview.accounts.length === 0) {
-        answer = "I couldn't find your account information."
-      } else {
-        const total = overview.totalBalance || 0
-        const accountCount = overview.accounts.length
-        const currency = overview.accounts[0]?.currency || "AED"
-        answer = `Your total balance is ${total.toLocaleString()} ${currency} across ${accountCount} account${accountCount > 1 ? 's' : ''}.`
+    // Fetch Accounts first (needed for transactions)
+    const accounts = await fetchData("accounts", userId)
+    const accountIds = accounts.map((a: any) => a.id)
+    
+    // Fetch other data in parallel
+    const [
+      cards,
+      loans,
+      holdings,
+      watchlist,
+      goals,
+      rewardProfileResult,
+      rewardActivities,
+      supportTickets
+    ] = await Promise.all([
+      fetchData("cards", userId),
+      fetchData("loans", userId),
+      fetchData("portfolio_holdings", userId),
+      fetchData("watchlist", userId),
+      fetchData("savings_goals", userId),
+      fetchData("reward_profiles", userId),
+      fetchData("reward_activities", userId),
+      fetchData("support_tickets", userId)
+    ])
+
+    // Fetch Transactions (using account IDs)
+    let transactions: any[] = []
+    if (accountIds.length > 0) {
+      const supabase = createDirectClient()
+      const { data: txData, error: txError } = await supabase
+        .from("transactions")
+        .select("*")
+        .in("account_id", accountIds)
+        .order("date", { ascending: false })
+      
+      if (!txError && txData) {
+        transactions = txData
+      } else if (txError) {
+        console.error("[agent] Error fetching transactions:", txError.message)
       }
-      console.log("[agent] Using fast answer formatting (skipped Gemini synthesis)")
-    } else if (lowerQ.includes("loan") && results.analyzeLoanPreapprovalForUser) {
-      // Fast formatting for loan queries (short for voice)
-      const loan = results.analyzeLoanPreapprovalForUser
-      if (loan.error || !loan.approved) {
-        answer = loan.reasoning || "I couldn't process your loan request."
-      } else {
-        const monthly = loan.monthlyPayment || 0
-        const amount = loan.requestedAmount || 0
-        answer = `You're approved for ${amount.toLocaleString()} AED. Monthly payment: ${monthly.toLocaleString()} AED over ${loan.requestedTerm || 24} months.`
+    }
+
+    // Fetch Goal Transactions
+    let goalTransactions: any[] = []
+    const goalIds = goals.map((g: any) => g.id)
+    if (goalIds.length > 0) {
+      const supabase = createDirectClient()
+      const { data: gTxData, error: gTxError } = await supabase
+        .from("savings_goal_transactions")
+        .select("*")
+        .in("goal_id", goalIds)
+        .order("date", { ascending: false })
+        
+      if (!gTxError && gTxData) {
+        goalTransactions = gTxData
       }
-      console.log("[agent] Using fast answer formatting (skipped Gemini synthesis)")
-    } else {
-      // Complex queries need Gemini for natural language generation
-      console.log("[agent] Using Gemini for answer synthesis (complex query)")
-      const answerPrompt = `
+    }
+
+    const rewardProfile = rewardProfileResult.length > 0 ? rewardProfileResult[0] : null
+
+    console.log(`[agent] Data fetched: Accounts=${accounts.length}, Tx=${transactions.length}, Cards=${cards.length}, Loans=${loans.length}, Holdings=${holdings.length}, Goals=${goals.length}`)
+
+    // -----------------------------------------------------------------------
+    // 2) GENERATE ANSWER WITH GEMINI (using all the data)
+    // -----------------------------------------------------------------------
+    // Generate answer using Gemini with all the data (like chat agent does)
+    const systemPrompt = `
 You are the "Bank of the Future" AI banking assistant speaking to a user via voice.
 
 User ID: ${userId}
 Agent persona: ${agentId}
 Current page: ${currentPage}
 
-The user asked:
-"${question}"
+You have access to the user's complete financial data. Answer their question using ONLY the data provided below.
 
-You have the following structured tool results (JSON):
+FINANCIAL DATA:
 
-${JSON.stringify(results, null, 2)}
+1. ACCOUNTS:
+${JSON.stringify(accounts.map((a: any) => ({ id: a.id, name: a.name, type: a.type, balance: a.balance, available_balance: a.available_balance, currency: a.currency })))}
 
-TASK:
-- Provide a SHORT, concise answer that can be spoken aloud (1-3 sentences maximum).
-- This is for voice interaction - keep it brief to avoid long pauses.
-- Use the numbers and facts from the tool results; do not invent data.
-- If the tool results show empty arrays or zero values, it means no data was found for this user ID (${userId}).
-- If no data is found, briefly say you couldn't find account information.
-- If data exists, mention only the most relevant numbers or facts that directly answer the question.
-- Keep the tone professional but friendly.
-- DO NOT include markdown, bullet points, code blocks, or long explanations. Just 1-3 short sentences.
-- Example: "Your total balance is 15,000 AED across 2 accounts." NOT "You have multiple accounts with various balances totaling..."
+2. CARDS:
+${JSON.stringify(cards.map((c: any) => ({ id: c.id, type: c.type, last4: c.last4, expiry: c.expiry, status: c.status, limit: c.limit })))}
+
+3. LOANS:
+${JSON.stringify(loans.map((l: any) => ({ id: l.id, type: l.type, amount: l.amount, remaining: l.remaining, interest_rate: l.interest_rate, monthly_payment: l.monthly_payment, status: l.status })))}
+
+4. RECENT TRANSACTIONS (Last 50 of ${transactions.length}):
+${JSON.stringify(transactions.slice(0, 50).map((tx: any) => ({ date: tx.date, description: tx.description, amount: tx.amount, type: tx.type, category: tx.category, is_unusual: tx.is_unusual, unusual_reason: tx.unusual_reason })))}
+
+5. INVESTMENT PORTFOLIO:
+${JSON.stringify(holdings.map((h: any) => ({ symbol: h.symbol, name: h.name, quantity: h.quantity, current_price: h.current_price, total_value: h.total_value })))}
+
+6. SAVINGS GOALS:
+${JSON.stringify(goals.map((g: any) => ({ id: g.id, name: g.name, target: g.target, current: g.current, deadline: g.deadline, status: g.status })))}
+
+7. REWARDS:
+- Profile: ${JSON.stringify(rewardProfile ? { tier: rewardProfile.tier, points: rewardProfile.points, next_tier: rewardProfile.next_tier } : null)}
+- Recent Activity: ${JSON.stringify(rewardActivities.slice(0, 5).map((a: any) => ({ date: a.date, description: a.description, points: a.points })))}
+
+8. SUPPORT TICKETS:
+${JSON.stringify(supportTickets.slice(0, 5).map((t: any) => ({ id: t.id, subject: t.subject, status: t.status, created_at: t.created_at })))}
+
+GUIDELINES:
+- Answer based ONLY on the provided data.
+- Provide a SHORT, concise answer (1-3 sentences maximum) for voice interaction.
+- Keep it brief to avoid long pauses.
+- Format currency as "AED X,XXX" (no decimals for voice).
+- If asked about something not in the data, say you don't have that information.
+- Transaction types: "credit" = income/deposits, "debit" = spending/withdrawals.
+- Current Date: ${new Date().toISOString().split('T')[0]}
+- Be professional but friendly.
+- DO NOT include markdown, bullet points, or code blocks. Plain text sentences only.
 `
 
-      const answerResult = await model.generateContent({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: answerPrompt }],
-          },
-        ],
-      })
+    const answerResult = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: `${systemPrompt}\n\nThe user asked: "${question}"\n\nProvide a short answer (1-3 sentences):` }],
+        },
+      ],
+    })
 
-      answer = answerResult.response.text()
-    }
+    const answer = answerResult.response.text()
 
     // Detect if this is a Vapi request
     // Vapi API Request tool sends: { question, userId, ... } or { message: { toolCalls: [...] } }
@@ -398,7 +296,7 @@ TASK:
     }
 
     // Standard API response format (for Next.js chat interface)
-    return NextResponse.json({ answer, toolCalls, toolResults: results })
+    return NextResponse.json({ answer })
   } catch (error: any) {
     console.error("[agent] Error:", error)
     return NextResponse.json(

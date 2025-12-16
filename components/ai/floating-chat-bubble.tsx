@@ -576,7 +576,7 @@ export function FloatingChatBubble() {
       if (voiceAssistEnabled && vapiClient && message.content) {
         try {
           // Extract short answer from the message content (it's appended with a marker)
-          const voiceSummaryMatch = message.content.match(/<!--VOICE_SUMMARY:(.+?)-->/s)
+          const voiceSummaryMatch = message.content.match(/<!--VOICE_SUMMARY:([\s\S]+?)-->/)
           const shortAnswer = voiceSummaryMatch 
             ? voiceSummaryMatch[1].trim() 
             : message.content.substring(0, 150) + "..." // Fallback: first 150 chars

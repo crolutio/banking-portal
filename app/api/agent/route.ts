@@ -1,57 +1,12 @@
 import { NextResponse } from "next/server"
-import { GoogleGenerativeAI } from "@google/generative-ai"
-import { createDirectClient } from "@/lib/supabase/direct-client"
-import {
-  getAccountsOverview,
-  getRecentTransactions,
-  analyzeSpending,
-  analyzeLoanPreapprovalForUser,
-} from "@/lib/agent/tools"
+import { runLangGraphAgent } from "@/lib/agent/langgraph-agent"
 
 export const runtime = "nodejs"
 
-// Helper to safely fetch data from any Supabase table
-async function fetchData(table: string, userId: string, column = "user_id") {
-  const supabase = createDirectClient()
-  try {
-    const { data, error } = await supabase
-      .from(table)
-      .select("*")
-      .eq(column, userId)
-    
-    if (error) {
-      console.error(`[agent] Error fetching ${table}:`, error.message)
-      return []
-    }
-    return data || []
-  } catch (err) {
-    console.error(`[agent] Exception fetching ${table}:`, err)
-    return []
-  }
-}
-
-type ToolCall = {
-  name: string
-  args?: Record<string, any>
-}
-
-function stripJson(text: string): string {
-  // Remove possible code fences and surrounding text
-  const jsonMatch = text.match(/```json([\s\S]*?)```/i)
-  if (jsonMatch) return jsonMatch[1].trim()
-  const braceIndex = text.indexOf("{")
-  if (braceIndex >= 0) {
-    const lastBrace = text.lastIndexOf("}")
-    if (lastBrace > braceIndex) {
-      return text.slice(braceIndex, lastBrace + 1)
-    }
-  }
-  return text.trim()
-}
-
 export async function POST(req: Request) {
+  let body: any = {}
   try {
-    const body = await req.json()
+    body = await req.json()
     
     // Log the full request for debugging
     console.log("[agent] Full request body:", JSON.stringify(body, null, 2))
@@ -116,138 +71,45 @@ export async function POST(req: Request) {
       currentPage,
     })
 
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY)
-    const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
-
     // -----------------------------------------------------------------------
-    // 1) FETCH ALL DATA (like the chat agent does)
+    // Use LangGraph Agent (for both voice and text)
     // -----------------------------------------------------------------------
-    console.log(`[agent] Fetching all data for user: ${userId}`)
+    const isVoice = !!(body.message?.toolCalls || toolCall || body.toolCallId)
     
-    // Fetch Accounts first (needed for transactions)
-    const accounts = await fetchData("accounts", userId)
-    const accountIds = accounts.map((a: any) => a.id)
+    console.log(`[agent] Running LangGraph agent for user: ${userId} (voice: ${isVoice})`)
     
-    // Fetch other data in parallel
-    const [
-      cards,
-      loans,
-      holdings,
-      watchlist,
-      goals,
-      rewardProfileResult,
-      rewardActivities,
-      supportTickets
-    ] = await Promise.all([
-      fetchData("cards", userId),
-      fetchData("loans", userId),
-      fetchData("portfolio_holdings", userId),
-      fetchData("watchlist", userId),
-      fetchData("savings_goals", userId),
-      fetchData("reward_profiles", userId),
-      fetchData("reward_activities", userId),
-      fetchData("support_tickets", userId)
-    ])
-
-    // Fetch Transactions (using account IDs)
-    let transactions: any[] = []
-    if (accountIds.length > 0) {
-      const supabase = createDirectClient()
-      const { data: txData, error: txError } = await supabase
-        .from("transactions")
-        .select("*")
-        .in("account_id", accountIds)
-        .order("date", { ascending: false })
+    let answer: string
+    try {
+      // Add timeout for voice mode to prevent long waits
+      const timeoutMs = isVoice ? 12000 : 30000 // 12s for voice, 30s for text
       
-      if (!txError && txData) {
-        transactions = txData
-      } else if (txError) {
-        console.error("[agent] Error fetching transactions:", txError.message)
+      answer = await Promise.race([
+        runLangGraphAgent({
+          question,
+          userId,
+          apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY!,
+          isVoice,
+          agentId,
+          currentPage,
+        }),
+        new Promise<string>((_, reject) => 
+          setTimeout(() => reject(new Error("Agent timeout")), timeoutMs)
+        )
+      ])
+      
+      console.log(`[agent] Agent completed successfully, answer length: ${answer?.length || 0}`)
+    } catch (error: any) {
+      console.error("[agent] LangGraph agent error:", error)
+      console.error("[agent] Error message:", error?.message)
+      console.error("[agent] Error stack:", error?.stack)
+      
+      // Return a user-friendly error message that won't break Vapi
+      if (error?.message?.includes("timeout")) {
+        answer = "I'm taking a bit longer than usual. Please try asking again."
+      } else {
+        answer = "I'm sorry, I encountered an error processing your request. Please try again."
       }
     }
-
-    // Fetch Goal Transactions
-    let goalTransactions: any[] = []
-    const goalIds = goals.map((g: any) => g.id)
-    if (goalIds.length > 0) {
-      const supabase = createDirectClient()
-      const { data: gTxData, error: gTxError } = await supabase
-        .from("savings_goal_transactions")
-        .select("*")
-        .in("goal_id", goalIds)
-        .order("date", { ascending: false })
-        
-      if (!gTxError && gTxData) {
-        goalTransactions = gTxData
-      }
-    }
-
-    const rewardProfile = rewardProfileResult.length > 0 ? rewardProfileResult[0] : null
-
-    console.log(`[agent] Data fetched: Accounts=${accounts.length}, Tx=${transactions.length}, Cards=${cards.length}, Loans=${loans.length}, Holdings=${holdings.length}, Goals=${goals.length}`)
-
-    // -----------------------------------------------------------------------
-    // 2) GENERATE ANSWER WITH GEMINI (using all the data)
-    // -----------------------------------------------------------------------
-    // Generate answer using Gemini with all the data (like chat agent does)
-    const systemPrompt = `
-You are the "Bank of the Future" AI banking assistant speaking to a user via voice.
-
-User ID: ${userId}
-Agent persona: ${agentId}
-Current page: ${currentPage}
-
-You have access to the user's complete financial data. Answer their question using ONLY the data provided below.
-
-FINANCIAL DATA:
-
-1. ACCOUNTS:
-${JSON.stringify(accounts.map((a: any) => ({ id: a.id, name: a.name, type: a.type, balance: a.balance, available_balance: a.available_balance, currency: a.currency })))}
-
-2. CARDS:
-${JSON.stringify(cards.map((c: any) => ({ id: c.id, type: c.type, last4: c.last4, expiry: c.expiry, status: c.status, limit: c.limit })))}
-
-3. LOANS:
-${JSON.stringify(loans.map((l: any) => ({ id: l.id, type: l.type, amount: l.amount, remaining: l.remaining, interest_rate: l.interest_rate, monthly_payment: l.monthly_payment, status: l.status })))}
-
-4. RECENT TRANSACTIONS (Last 50 of ${transactions.length}):
-${JSON.stringify(transactions.slice(0, 50).map((tx: any) => ({ date: tx.date, description: tx.description, amount: tx.amount, type: tx.type, category: tx.category, is_unusual: tx.is_unusual, unusual_reason: tx.unusual_reason })))}
-
-5. INVESTMENT PORTFOLIO:
-${JSON.stringify(holdings.map((h: any) => ({ symbol: h.symbol, name: h.name, quantity: h.quantity, current_price: h.current_price, total_value: h.total_value })))}
-
-6. SAVINGS GOALS:
-${JSON.stringify(goals.map((g: any) => ({ id: g.id, name: g.name, target: g.target, current: g.current, deadline: g.deadline, status: g.status })))}
-
-7. REWARDS:
-- Profile: ${JSON.stringify(rewardProfile ? { tier: rewardProfile.tier, points: rewardProfile.points, next_tier: rewardProfile.next_tier } : null)}
-- Recent Activity: ${JSON.stringify(rewardActivities.slice(0, 5).map((a: any) => ({ date: a.date, description: a.description, points: a.points })))}
-
-8. SUPPORT TICKETS:
-${JSON.stringify(supportTickets.slice(0, 5).map((t: any) => ({ id: t.id, subject: t.subject, status: t.status, created_at: t.created_at })))}
-
-GUIDELINES:
-- Answer based ONLY on the provided data.
-- Provide a SHORT, concise answer (1-3 sentences maximum) for voice interaction.
-- Keep it brief to avoid long pauses.
-- Format currency as "AED X,XXX" (no decimals for voice).
-- If asked about something not in the data, say you don't have that information.
-- Transaction types: "credit" = income/deposits, "debit" = spending/withdrawals.
-- Current Date: ${new Date().toISOString().split('T')[0]}
-- Be professional but friendly.
-- DO NOT include markdown, bullet points, or code blocks. Plain text sentences only.
-`
-
-    const answerResult = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: `${systemPrompt}\n\nThe user asked: "${question}"\n\nProvide a short answer (1-3 sentences):` }],
-        },
-      ],
-    })
-
-    const answer = answerResult.response.text()
 
     // Detect if this is a Vapi request
     // Vapi API Request tool sends: { question, userId, ... } or { message: { toolCalls: [...] } }
@@ -298,7 +160,43 @@ GUIDELINES:
     // Standard API response format (for Next.js chat interface)
     return NextResponse.json({ answer })
   } catch (error: any) {
-    console.error("[agent] Error:", error)
+    console.error("[agent] Top-level error:", error)
+    console.error("[agent] Error message:", error?.message)
+    
+    // For Vapi requests, always return a valid response format even on error
+    // This prevents Vapi from cutting the call
+    const isVapiRequest = !!(body?.message?.toolCalls || body?.toolCallId || body?.question)
+    
+    if (isVapiRequest) {
+      const toolCall = body?.message?.toolCalls?.[0]
+      const errorMessage = "I'm sorry, I encountered an error. Please try again."
+      
+      if (toolCall?.id) {
+        return NextResponse.json({
+          results: [
+            {
+              toolCallId: toolCall.id,
+              result: errorMessage
+            }
+          ]
+        })
+      } else if (body?.toolCallId) {
+        return NextResponse.json({
+          results: [
+            {
+              toolCallId: body.toolCallId,
+              result: errorMessage
+            }
+          ]
+        })
+      } else {
+        return NextResponse.json({
+          result: errorMessage
+        })
+      }
+    }
+    
+    // For non-Vapi requests, return error status
     return NextResponse.json(
       { error: error?.message || "Internal Server Error" },
       { status: 500 },

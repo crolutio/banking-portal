@@ -646,7 +646,7 @@ export async function runLangGraphAgent({
     // For voice mode, return a quick fallback answer instead of throwing
     if (isVoice) {
       console.log("[langgraph-agent] Voice mode: Returning fallback answer due to error")
-      return "I'm sorry, I'm having trouble processing that right now. Could you please try again?"
+      return { answer: "I'm sorry, I'm having trouble processing that right now. Could you please try again?" }
     }
     
     throw error // Re-throw to be caught by route handler

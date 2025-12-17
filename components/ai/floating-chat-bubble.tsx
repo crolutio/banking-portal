@@ -573,7 +573,7 @@ export function FloatingChatBubble() {
     },
     onFinish: async (message) => {
       // If voice assist is enabled, extract and speak the short summary
-      if (voiceAssistEnabled && vapiClient && message.content) {
+      if (voiceAssistEnabled && message.content) {
         try {
           // Extract short answer from the message content (it's appended with a marker)
           const voiceSummaryMatch = message.content.match(/<!--VOICE_SUMMARY:([\s\S]+?)-->/)
@@ -586,12 +586,32 @@ export function FloatingChatBubble() {
             message.content = message.content.replace(/<!--VOICE_SUMMARY:[\s\S]+?-->/, "").trim()
           }
           
-          // Use browser TTS to speak the short answer
+          // Use Vapi's voice API to speak the answer
+          // Since Vapi doesn't have standalone TTS, we'll use their voice call API
+          // For now, we'll use browser TTS as it works well and sounds good
+          // In the future, we could create a Vapi assistant specifically for TTS
+          
           if ('speechSynthesis' in window) {
+            // Stop any ongoing speech
+            speechSynthesis.cancel()
+            
+            // Use a high-quality voice if available
+            const voices = speechSynthesis.getVoices()
+            const preferredVoice = voices.find(v => 
+              v.name.includes('Google') || 
+              v.name.includes('Microsoft') || 
+              v.lang.startsWith('en')
+            ) || voices.find(v => v.lang.startsWith('en')) || voices[0]
+            
             const utterance = new SpeechSynthesisUtterance(shortAnswer)
-            utterance.rate = 1.0
+            if (preferredVoice) {
+              utterance.voice = preferredVoice
+            }
+            utterance.rate = 0.95 // Slightly slower for clarity
             utterance.pitch = 1.0
             utterance.volume = 1.0
+            utterance.lang = 'en-US'
+            
             speechSynthesis.speak(utterance)
             console.log("[Voice Assist] Speaking via browser TTS:", shortAnswer.substring(0, 50) + "...")
           } else {
@@ -605,6 +625,9 @@ export function FloatingChatBubble() {
   })
 
   // Initialize Vapi client for voice assist TTS
+  // Note: Vapi doesn't have standalone TTS API, so we use browser TTS
+  // In the future, we could create a Vapi assistant specifically for TTS
+  // and use Vapi's API to make a quick call to speak the text
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_VAPI_API_KEY
     if (voiceAssistEnabled && apiKey) {

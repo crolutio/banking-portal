@@ -99,7 +99,14 @@ export async function POST(req: Request) {
       
       answer = agentResult.answer
       
+      // Validate answer is a non-empty string
+      if (!answer || typeof answer !== "string" || answer.trim().length === 0) {
+        console.warn("[agent] Empty or invalid answer received, using fallback")
+        answer = "I'm sorry, I couldn't generate a response. Please try again."
+      }
+      
       console.log(`[agent] Agent completed successfully, answer length: ${answer?.length || 0}`)
+      console.log(`[agent] Answer preview: ${answer.substring(0, 100)}...`)
     } catch (error: any) {
       console.error("[agent] LangGraph agent error:", error)
       console.error("[agent] Error message:", error?.message)
@@ -111,6 +118,32 @@ export async function POST(req: Request) {
       } else {
         answer = "I'm sorry, I encountered an error processing your request. Please try again."
       }
+    }
+    
+    // Final validation - ensure answer is always a valid string
+    if (!answer || typeof answer !== "string" || answer.trim().length === 0) {
+      console.error("[agent] Answer validation failed, using emergency fallback")
+      answer = "I'm sorry, I'm having trouble right now. Could you please try again?"
+    }
+    
+    // Clean up answer for voice mode - remove markdown and ensure it's speakable
+    if (isVoice) {
+      // Remove markdown formatting that might break TTS
+      answer = answer
+        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
+        .replace(/\*(.*?)\*/g, '$1') // Remove italic
+        .replace(/`(.*?)`/g, '$1') // Remove code
+        .replace(/#{1,6}\s+/g, '') // Remove headers
+        .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove links
+        .replace(/\n{3,}/g, '\n\n') // Normalize line breaks
+        .trim()
+      
+      // Ensure minimum length for voice
+      if (answer.length < 10) {
+        answer = "I understand. " + answer
+      }
+      
+      console.log(`[agent] Voice answer cleaned, final length: ${answer.length}`)
     }
 
     // Detect if this is a Vapi request

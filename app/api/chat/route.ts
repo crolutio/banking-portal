@@ -647,14 +647,39 @@ RESPONSE STYLE:
         const shortAnswer = result.shortAnswer || longAnswer.substring(0, 100) + "..."
         
         // Create a stream with the long answer, and append short answer at the end
+        // Sanitize text to remove problematic Unicode characters that can't be encoded
+        const sanitizeText = (text: string) => {
+          return text
+            .replace(/[\u2013\u2014\u2015]/g, '-') // Replace em/en dashes with regular dash
+            .replace(/[\u2018\u2019]/g, "'") // Replace smart quotes
+            .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes
+            .replace(/[\u2026]/g, '...') // Replace ellipsis
+            .replace(/[^\x00-\x7F]/g, (char) => {
+              // Replace other non-ASCII with closest ASCII equivalent or remove
+              const code = char.charCodeAt(0)
+              if (code > 255) {
+                return '' // Remove characters that can't be encoded
+              }
+              return char
+            })
+        }
+        
+        const sanitizedLongAnswer = sanitizeText(longAnswer)
+        const sanitizedShortAnswer = sanitizeText(shortAnswer)
+        
         const encoder = new TextEncoder()
         const stream = new ReadableStream({
           async start(controller) {
-            // Stream the long answer
-            controller.enqueue(encoder.encode(longAnswer))
-            // Append short answer with special marker
-            controller.enqueue(encoder.encode(`\n\n<!--VOICE_SUMMARY:${shortAnswer}-->`))
-            controller.close()
+            try {
+              // Stream the long answer
+              controller.enqueue(encoder.encode(sanitizedLongAnswer))
+              // Append short answer with special marker
+              controller.enqueue(encoder.encode(`\n\n<!--VOICE_SUMMARY:${sanitizedShortAnswer}-->`))
+              controller.close()
+            } catch (error) {
+              console.error("[Chat] Stream encoding error:", error)
+              controller.error(error)
+            }
           },
         })
         

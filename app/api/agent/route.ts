@@ -145,11 +145,16 @@ export async function POST(req: Request) {
         .replace(/\n/g, '. ') // Convert single newlines to periods
         .replace(/\.{2,}/g, '.') // Normalize multiple periods
         .replace(/\s{2,}/g, ' ') // Normalize multiple spaces
+        // Replace problematic Unicode characters
+        .replace(/[\u2013\u2014\u2015]/g, '-') // Replace em/en dashes
+        .replace(/[\u2018\u2019]/g, "'") // Replace smart quotes
+        .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes
+        .replace(/[\u2026]/g, '...') // Replace ellipsis
         .trim()
       
       // Remove any remaining special characters that might break TTS
       answer = answer
-        .replace(/[^\w\s.,!?;:()'-]/g, '') // Remove special chars except common punctuation
+        .replace(/[^\x00-\x7F]/g, '') // Remove all non-ASCII characters
         .replace(/\s+/g, ' ') // Normalize spaces
         .trim()
       
@@ -165,6 +170,12 @@ export async function POST(req: Request) {
       
       console.log(`[agent] Voice answer cleaned, final length: ${answer.length}`)
       console.log(`[agent] Voice answer preview: ${answer.substring(0, 200)}`)
+      
+      // Final validation for voice - ensure it's a valid string
+      if (!answer || answer.length === 0) {
+        console.error("[agent] Voice answer is empty after cleaning, using fallback")
+        answer = "I'm sorry, I couldn't generate a response. Please try again."
+      }
     }
 
     // Detect if this is a Vapi request
@@ -187,6 +198,11 @@ export async function POST(req: Request) {
     // Handle Vapi tool call response format (if request came from Vapi)
     if (isVapiRequest && toolCall?.id) {
       // Vapi expects this format for tool calls
+      console.log("[agent] Returning Vapi tool call response format", {
+        toolCallId: toolCall.id,
+        answerLength: answer.length,
+        answerPreview: answer.substring(0, 100)
+      })
       return NextResponse.json({
         results: [
           {
@@ -194,9 +210,18 @@ export async function POST(req: Request) {
             result: answer
           }
         ]
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        }
       })
     } else if (isVapiRequest && body.toolCallId) {
       // Alternative Vapi format
+      console.log("[agent] Returning Vapi alternative format", {
+        toolCallId: body.toolCallId,
+        answerLength: answer.length
+      })
       return NextResponse.json({
         results: [
           {
@@ -204,12 +229,25 @@ export async function POST(req: Request) {
             result: answer
           }
         ]
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        }
       })
     } else if (isVapiRequest) {
       // Vapi request but no toolCallId - return just the result
       // This handles API Request tool format
+      console.log("[agent] Returning Vapi API Request format", {
+        answerLength: answer.length
+      })
       return NextResponse.json({
         result: answer
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        }
       })
     }
 

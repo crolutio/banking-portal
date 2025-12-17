@@ -117,10 +117,14 @@ export function VapiVoiceButton({
     })
 
     return () => {
-      client.stop()
+      try {
+        client.stop()
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiKey, assistantId, onFinalTranscript])
+  }, [apiKey, assistantId]) // Removed onFinalTranscript from deps to prevent re-initialization
 
   const toggleCall = () => {
     if (!vapi || !assistantId) {

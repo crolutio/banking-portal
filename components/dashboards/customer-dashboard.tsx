@@ -27,7 +27,7 @@ import { createClient } from "@/lib/supabase/client"
 import type { Account, Transaction, Card as CardType, Loan, TransactionCategory } from "@/lib/types"
 
 export function CustomerDashboard() {
-  const { currentUser } = useRole()
+  const { currentUser, currentBankingUserId } = useRole()
   const { openChatWithMessage } = useFloatingChat()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -51,16 +51,65 @@ export function CustomerDashboard() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!currentUser?.id) return
+      if (!currentBankingUserId) return
 
       setIsLoading(true)
+      // #region agent log
+      if (typeof window !== "undefined") {
+        console.log("[debug] dashboard fetchData start", { userId: currentBankingUserId })
+        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "customer-dashboard.tsx:58",
+            message: "fetchData start",
+            data: { userId: currentBankingUserId },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run8",
+            hypothesisId: "G",
+          }),
+        }).catch((err) => console.warn("[debug] log POST failed", err))
+      }
+      // #endregion
       const supabase = createClient()
 
       // Fetch Accounts
       const { data: accountsData, error: accountsError } = await supabase
         .from("accounts")
         .select("*")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentBankingUserId)
+
+      // #region agent log
+      if (typeof window !== "undefined") {
+        console.log("[debug] dashboard accounts query result", {
+          userId: currentBankingUserId,
+          hasError: !!accountsError,
+          errorMessage: accountsError?.message,
+          errorCode: accountsError?.code,
+          count: accountsData?.length,
+        })
+        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "customer-dashboard.tsx:66",
+            message: "accounts query result",
+            data: {
+              userId: currentBankingUserId,
+              hasError: !!accountsError,
+              errorMessage: accountsError?.message,
+              errorCode: accountsError?.code,
+              count: accountsData?.length,
+            },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run8",
+            hypothesisId: "G",
+          }),
+        }).catch((err) => console.warn("[debug] log POST failed", err))
+      }
+      // #endregion
 
       if (accountsError) {
         console.error("Error fetching accounts:", accountsError)
@@ -128,7 +177,38 @@ export function CustomerDashboard() {
       const { data: cardsData, error: cardsError } = await supabase
         .from("cards")
         .select("*")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentBankingUserId)
+
+      // #region agent log
+      if (typeof window !== "undefined") {
+        console.log("[debug] dashboard cards query result", {
+          userId: currentBankingUserId,
+          hasError: !!cardsError,
+          errorMessage: cardsError?.message,
+          errorCode: cardsError?.code,
+          count: cardsData?.length,
+        })
+        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "customer-dashboard.tsx:88",
+            message: "cards query result",
+            data: {
+              userId: currentBankingUserId,
+              hasError: !!cardsError,
+              errorMessage: cardsError?.message,
+              errorCode: cardsError?.code,
+              count: cardsData?.length,
+            },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run8",
+            hypothesisId: "G",
+          }),
+        }).catch((err) => console.warn("[debug] log POST failed", err))
+      }
+      // #endregion
 
       if (cardsError) console.error("Error fetching cards:", cardsError)
 
@@ -152,7 +232,38 @@ export function CustomerDashboard() {
       const { data: loansData, error: loansError } = await supabase
         .from("loans")
         .select("*")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentBankingUserId)
+
+      // #region agent log
+      if (typeof window !== "undefined") {
+        console.log("[debug] dashboard loans query result", {
+          userId: currentBankingUserId,
+          hasError: !!loansError,
+          errorMessage: loansError?.message,
+          errorCode: loansError?.code,
+          count: loansData?.length,
+        })
+        fetch("http://127.0.0.1:7243/ingest/416c505f-0f39-4083-9a11-a59f7ac8dac3", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "customer-dashboard.tsx:121",
+            message: "loans query result",
+            data: {
+              userId: currentBankingUserId,
+              hasError: !!loansError,
+              errorMessage: loansError?.message,
+              errorCode: loansError?.code,
+              count: loansData?.length,
+            },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "run8",
+            hypothesisId: "G",
+          }),
+        }).catch((err) => console.warn("[debug] log POST failed", err))
+      }
+      // #endregion
 
       if (loansError) console.error("Error fetching loans:", loansError)
 

@@ -98,13 +98,13 @@ const investmentCategories = [
 ]
 
 export default function InvestmentsPage() {
-  const { currentUser } = useRole()
+  const { currentUser, currentBankingUserId } = useRole()
   const [userHoldings, setUserHoldings] = useState<PortfolioHolding[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     async function fetchData() {
-      if (!currentUser?.id) return
+      if (!currentBankingUserId) return
 
       setIsLoading(true)
       const supabase = createClient()
@@ -112,7 +112,7 @@ export default function InvestmentsPage() {
       const { data, error } = await supabase
         .from("portfolio_holdings")
         .select("*")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentBankingUserId)
 
       if (error) {
         console.error("Error fetching holdings:", error)

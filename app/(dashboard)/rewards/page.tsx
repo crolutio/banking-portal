@@ -31,7 +31,7 @@ import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
 export default function RewardsPage() {
-  const { currentUser } = useRole()
+  const { currentUser, currentBankingUserId } = useRole()
   const [profile, setProfile] = useState<RewardProfile | null>(null)
   const [catalog, setCatalog] = useState<RewardItem[]>([])
   const [activities, setActivities] = useState<RewardActivity[]>([])
@@ -41,7 +41,7 @@ export default function RewardsPage() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!currentUser?.id) return
+      if (!currentBankingUserId) return
 
       setIsLoading(true)
       const supabase = createClient()
@@ -50,7 +50,7 @@ export default function RewardsPage() {
       const { data: profileData } = await supabase
         .from("reward_profiles")
         .select("*")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentBankingUserId)
         .single()
 
       if (profileData) {
@@ -64,7 +64,7 @@ export default function RewardsPage() {
       } else {
         // Init empty profile if none exists (though seeding should have handled it)
         setProfile({
-            userId: currentUser.id,
+            userId: currentBankingUserId,
             totalPoints: 0,
             lifetimePoints: 0,
             tier: "Bronze",
@@ -95,7 +95,7 @@ export default function RewardsPage() {
       const { data: activityData } = await supabase
         .from("reward_activities")
         .select("*")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentBankingUserId)
         .order("created_at", { ascending: false })
         .limit(10)
 
@@ -145,7 +145,7 @@ export default function RewardsPage() {
          await supabase
           .from("reward_profiles")
           .update({ total_points: profile.totalPoints - item.pointsCost })
-          .eq("user_id", currentUser.id)
+          .eq("user_id", currentBankingUserId)
       }
 
       // Optimistic update

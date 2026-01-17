@@ -61,7 +61,7 @@ const loanTypeIcons: Record<string, React.ElementType> = {
 }
 
 export default function LoansPage() {
-  const { currentUser } = useRole()
+  const { currentUser, currentBankingUserId } = useRole()
   const { openChatWithMessage } = useFloatingChat()
   const [activeTab, setActiveTab] = useState("my-loans")
   const [selectedOffer, setSelectedOffer] = useState<LoanOffer | null>(null)
@@ -75,7 +75,7 @@ export default function LoansPage() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!currentUser?.id) return
+      if (!currentBankingUserId) return
 
       setIsLoading(true)
       const supabase = createClient()
@@ -84,7 +84,7 @@ export default function LoansPage() {
       const { data: loansData, error: loansError } = await supabase
         .from("loans")
         .select("*")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentBankingUserId)
 
       if (loansError) console.error("Error fetching loans:", loansError)
 

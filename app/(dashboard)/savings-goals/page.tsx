@@ -242,7 +242,7 @@ function GoalCard({ goal, onAction }: { goal: SavingsGoal; onAction: (action: st
 }
 
 function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onOpenChange: (open: boolean) => void, accounts: Account[] }) {
-  const { currentUser } = useRole()
+  const { currentUser, currentBankingUserId } = useRole()
   const [step, setStep] = useState(1)
   const [selectedTemplate, setSelectedTemplate] = useState<(typeof goalTemplates)[0] | null>(null)
   const [customGoal, setCustomGoal] = useState({
@@ -281,7 +281,7 @@ function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onO
       const { data, error } = await supabase
         .from('savings_goals')
         .insert({
-          user_id: currentUser?.id,
+          user_id: currentBankingUserId,
           name: customGoal.name,
           category: customGoal.category,
           target_amount: customGoal.targetAmount,
@@ -696,7 +696,7 @@ function AddFundsDialog({
 }
 
 export default function SavingsGoalsPage() {
-  const { currentUser } = useRole()
+  const { currentUser, currentBankingUserId } = useRole()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [addFundsGoal, setAddFundsGoal] = useState<SavingsGoal | null>(null)
   const [activeTab, setActiveTab] = useState("active")
@@ -707,7 +707,7 @@ export default function SavingsGoalsPage() {
 
   useEffect(() => {
     async function fetchData() {
-      if (!currentUser?.id) return
+      if (!currentBankingUserId) return
 
       setIsLoading(true)
       const supabase = createClient()
@@ -716,7 +716,7 @@ export default function SavingsGoalsPage() {
       const { data: goalsData, error: goalsError } = await supabase
         .from("savings_goals")
         .select("*")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentBankingUserId)
 
       if (goalsError) console.error("Error fetching savings goals:", goalsError)
 
@@ -743,7 +743,7 @@ export default function SavingsGoalsPage() {
       const { data: accountsData, error: accountsError } = await supabase
         .from("accounts")
         .select("*")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentBankingUserId)
 
       if (accountsError) console.error("Error fetching accounts:", accountsError)
 
@@ -765,7 +765,7 @@ export default function SavingsGoalsPage() {
     }
 
     fetchData()
-  }, [currentUser])
+  }, [currentBankingUserId])
 
   const activeGoals = savingsGoals.filter((g) => g.status === "active")
   const pausedGoals = savingsGoals.filter((g) => g.status === "paused")

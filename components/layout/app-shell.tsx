@@ -155,7 +155,7 @@ function RoleSwitcher() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="flex items-center gap-2 px-2">
           <Avatar className="h-8 w-8">
-            <AvatarImage src="/placeholder.svg" alt={currentUser.name || "User"} />
+            <AvatarImage src={currentUser.avatar || "/placeholder.svg"} alt={currentUser.name || "User"} />
             <AvatarFallback className="bg-primary/20 text-primary text-xs">
               {userInitials}
             </AvatarFallback>
@@ -183,7 +183,7 @@ function RoleSwitcher() {
               className="flex items-center gap-3 py-2 focus:bg-accent/50 dark:focus:bg-accent/20"
             >
               <Avatar className="h-8 w-8">
-                <AvatarImage src="/placeholder.svg" alt={user.name} />
+                <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
                 <AvatarFallback className="bg-primary/20 text-primary text-xs">
                   {initials}
                 </AvatarFallback>

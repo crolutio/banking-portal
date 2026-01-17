@@ -15,14 +15,14 @@ import { createClient } from "@/lib/supabase/client"
 import type { User } from "@/lib/types"
 
 export function RMDashboard() {
-  const { currentUser } = useRole()
+  const { currentUser, currentBankingUserId } = useRole()
   const [clients, setClients] = useState<any[]>([])
   const [clientsLoading, setClientsLoading] = useState(true)
   const [nbaList, setNbaList] = useState<any[]>([]) // Using mock NBA for now as table doesn't exist
 
   useEffect(() => {
     async function fetchData() {
-      if (!currentUser?.id) return
+      if (!currentBankingUserId) return
 
       setClientsLoading(true)
       const supabase = createClient()
@@ -31,7 +31,7 @@ export function RMDashboard() {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("*")
-        .eq("assigned_rm_id", currentUser.id)
+        .eq("assigned_rm_id", currentBankingUserId)
 
       if (profilesError) {
         console.error("Error fetching clients:", profilesError)

@@ -128,7 +128,7 @@ const categoryConfig: Record<string, any> = {
 export default function InvestmentCategoryPage() {
   const params = useParams()
   const router = useRouter()
-  const { currentUser } = useRole()
+  const { currentUser, currentBankingUserId } = useRole()
   const categoryId = params.category as string
   const config = categoryConfig[categoryId]
 
@@ -149,7 +149,7 @@ export default function InvestmentCategoryPage() {
     }
 
     async function fetchHoldings() {
-      if (!currentUser?.id) return
+      if (!currentBankingUserId) return
       setIsLoading(true)
       const supabase = createClient()
 
@@ -157,7 +157,7 @@ export default function InvestmentCategoryPage() {
       const { data, error } = await supabase
         .from("portfolio_holdings")
         .select("*")
-        .eq("user_id", currentUser.id)
+        .eq("user_id", currentBankingUserId)
 
       if (error) {
         console.error("Error fetching holdings:", error)

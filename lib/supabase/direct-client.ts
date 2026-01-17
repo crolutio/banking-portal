@@ -1,10 +1,13 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
-const SUPABASE_URL = "https://anltobzjhkgwyachuuqw.supabase.co"
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFubHRvYnpqaGtnd3lhY2h1dXF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ0MTY0OTEsImV4cCI6MjA3OTk5MjQ5MX0.Q4daNGeftXumNxbuwtclqnr4CIwQTtvxWm_Qr4DgS2k"
+const SUPABASE_URL = process.env.NEXT_PUBLIC_BANKING_SUPABASE_URL
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_BANKING_SUPABASE_ANON_KEY
 
 // Direct client for API routes that bypasses cookie auth
 export function createDirectClient() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error("Missing NEXT_PUBLIC_BANKING_SUPABASE_URL or NEXT_PUBLIC_BANKING_SUPABASE_ANON_KEY")
+  }
   return createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       persistSession: false,

@@ -83,7 +83,7 @@ export function CustomerDashboard() {
           body: JSON.stringify({
             location: "customer-dashboard.tsx:80",
             message: "accounts query start",
-            data: { table: "accounts_v2", filterColumn: "customer_id", userId: currentBankingUserId },
+            data: { table: "accounts", filterColumn: "customer_id", userId: currentBankingUserId },
             timestamp: Date.now(),
             sessionId: "debug-session",
             runId: "run9",
@@ -93,7 +93,7 @@ export function CustomerDashboard() {
       }
       // #endregion
       const { data: accountsData, error: accountsError } = await supabase
-        .from("accounts_v2")
+        .from("accounts")
         .select("*")
         .eq("customer_id", currentBankingUserId)
 
@@ -158,7 +158,7 @@ export function CustomerDashboard() {
             body: JSON.stringify({
               location: "customer-dashboard.tsx:138",
               message: "transactions query start",
-              data: { table: "transactions_v2", filterColumn: "account_id", accountIdCount: accountIds.length },
+              data: { table: "transactions", filterColumn: "account_id", accountIdCount: accountIds.length },
               timestamp: Date.now(),
               sessionId: "debug-session",
               runId: "run9",
@@ -216,7 +216,7 @@ export function CustomerDashboard() {
           body: JSON.stringify({
             location: "customer-dashboard.tsx:191",
             message: "cards query start",
-            data: { table: "cards_v2", filterColumn: "customer_id", userId: currentBankingUserId },
+            data: { table: "cards", filterColumn: "customer_id", userId: currentBankingUserId },
             timestamp: Date.now(),
             sessionId: "debug-session",
             runId: "run9",
@@ -226,7 +226,7 @@ export function CustomerDashboard() {
       }
       // #endregion
       const { data: cardsData, error: cardsError } = await supabase
-        .from("cards_v2")
+        .from("cards")
         .select("*")
         .eq("customer_id", currentBankingUserId)
 
@@ -288,7 +288,7 @@ export function CustomerDashboard() {
           body: JSON.stringify({
             location: "customer-dashboard.tsx:241",
             message: "loans query start",
-            data: { table: "loans_v2", filterColumn: "customer_id", userId: currentBankingUserId },
+            data: { table: "loans", filterColumn: "customer_id", userId: currentBankingUserId },
             timestamp: Date.now(),
             sessionId: "debug-session",
             runId: "run9",
@@ -298,7 +298,7 @@ export function CustomerDashboard() {
       }
       // #endregion
       const { data: loansData, error: loansError } = await supabase
-        .from("loans_v2")
+        .from("loans")
         .select("*")
         .eq("customer_id", currentBankingUserId)
 

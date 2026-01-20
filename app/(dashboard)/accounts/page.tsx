@@ -487,7 +487,7 @@ export default function AccountsPage() {
       // Fetch Accounts
       console.log("Fetching accounts for user:", currentBankingUserId)
       const { data: accountsData, error: accountsError } = await supabase
-        .from("accounts_v2")
+        .from("accounts")
         .select("*")
         .eq("customer_id", currentBankingUserId)
 

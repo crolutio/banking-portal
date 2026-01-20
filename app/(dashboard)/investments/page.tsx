@@ -110,7 +110,7 @@ export default function InvestmentsPage() {
       const supabase = createClient()
 
       const { data, error } = await supabase
-        .from("portfolio_holdings_v2")
+        .from("portfolio_holdings")
         .select("*")
         .eq("customer_id", currentBankingUserId)
 

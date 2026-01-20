@@ -82,7 +82,7 @@ export default function LoansPage() {
 
       // Fetch User Loans
       const { data: loansData, error: loansError } = await supabase
-        .from("loans_v2")
+        .from("loans")
         .select("*")
         .eq("customer_id", currentBankingUserId)
 

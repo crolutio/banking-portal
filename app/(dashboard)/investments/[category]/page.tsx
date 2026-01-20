@@ -155,7 +155,7 @@ export default function InvestmentCategoryPage() {
 
       // Fetch all holdings for user
       const { data, error } = await supabase
-        .from("portfolio_holdings_v2")
+        .from("portfolio_holdings")
         .select("*")
         .eq("customer_id", currentBankingUserId)
 

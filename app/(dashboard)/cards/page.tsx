@@ -343,7 +343,7 @@ export default function CardsPage() {
       const supabase = createClient()
 
       const { data, error } = await supabase
-        .from("cards_v2")
+        .from("cards")
         .select("*")
         .eq("customer_id", currentBankingUserId)
 

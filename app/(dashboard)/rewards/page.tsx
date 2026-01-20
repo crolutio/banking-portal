@@ -48,7 +48,7 @@ export default function RewardsPage() {
 
       // Fetch Profile
       const { data: profileData } = await supabase
-        .from("reward_profiles_v2")
+        .from("reward_profiles")
         .select("*")
         .eq("customer_id", currentBankingUserId)
         .single()
@@ -93,7 +93,7 @@ export default function RewardsPage() {
 
       // Fetch Activities
       const { data: activityData } = await supabase
-        .from("reward_activities_v2")
+        .from("reward_activities")
         .select("*")
         .eq("customer_id", currentBankingUserId)
         .order("created_at", { ascending: false })
@@ -124,7 +124,7 @@ export default function RewardsPage() {
       const supabase = createClient()
       
       // 1. Create redemption activity
-      const { error: activityError } = await supabase.from("reward_activities_v2").insert({
+      const { error: activityError } = await supabase.from("reward_activities").insert({
         customer_id: currentUser?.id,
         amount: -item.pointsCost,
         type: "redeemed",
@@ -143,7 +143,7 @@ export default function RewardsPage() {
       // Fallback if RPC doesn't exist (update directly)
       if (profileError) {
          await supabase
-          .from("reward_profiles_v2")
+          .from("reward_profiles")
           .update({ total_points: profile.totalPoints - item.pointsCost })
           .eq("customer_id", currentBankingUserId)
       }
@@ -154,7 +154,7 @@ export default function RewardsPage() {
       
       // Refresh activities
       const { data: newActivity } = await supabase
-        .from("reward_activities_v2")
+        .from("reward_activities")
         .select("*")
         .eq("customer_id", currentUser?.id)
         .order("created_at", { ascending: false })

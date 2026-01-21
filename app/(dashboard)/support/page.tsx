@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -73,21 +73,48 @@ export default function SupportPage() {
     customerId: customerId || "" 
   })
 
-  const { messages, send } = useConversationMessages({
+  const { messages, send, waitingForReply } = useConversationMessages({
     conversationId: selectedConversation?.id ?? null,
     customerId: customerId || "",
   })
+
+  // Deduplicate messages by ID to prevent React key warnings
+  const uniqueMessages = useMemo(() => {
+    const seen = new Set<string>()
+    return messages.filter((msg) => {
+      if (seen.has(msg.id)) {
+        return false
+      }
+      seen.add(msg.id)
+      return true
+    })
+  }, [messages])
+
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll when messages change or when waiting for reply
+  useEffect(() => {
+    // Small timeout to allow the DOM to update and ScrollArea to recalculate
+    const timeoutId = setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+    }, 100)
+    return () => clearTimeout(timeoutId)
+  }, [uniqueMessages, waitingForReply])
 
   const handleSendMessage = async () => {
     if (!selectedConversation) return
     const trimmed = newMessage.trim()
     if (!trimmed) return
 
+    // Clear input immediately for optimistic UI
+    setNewMessage("")
+
     try {
       await send(trimmed)
-      setNewMessage("")
     } catch (e) {
       console.error("Failed to send message", e)
+      // Restore message on error
+      setNewMessage(trimmed)
     }
   }
 
@@ -444,11 +471,11 @@ export default function SupportPage() {
                   <div className="flex-1 overflow-hidden min-h-0">
                     <ScrollArea className="h-full p-4">
                       <div className="space-y-4">
-                        {messages.map((m) => {
+                        {uniqueMessages.map((m, idx) => {
                           const isUser = m.sender_type === "customer"
                           return (
                             <div
-                              key={m.id}
+                              key={`${m.id}-${idx}`}
                               className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
                             >
                               {!isUser && (
@@ -484,6 +511,34 @@ export default function SupportPage() {
                             </div>
                           )
                         })}
+                        
+                        {/* Loading Spinner */}
+                        {waitingForReply && (
+                          <div className="flex gap-3 justify-start">
+                            <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                              <Headphones className="h-4 w-4" />
+                            </div>
+                            <div className="bg-muted rounded-2xl px-4 py-3">
+                              <div className="flex gap-1">
+                                <span
+                                  className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"
+                                  style={{ animationDelay: "0ms" }}
+                                />
+                                <span
+                                  className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"
+                                  style={{ animationDelay: "150ms" }}
+                                />
+                                <span
+                                  className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce"
+                                  style={{ animationDelay: "300ms" }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Scroll anchor */}
+                        <div ref={messagesEndRef} />
                       </div>
                     </ScrollArea>
                   </div>

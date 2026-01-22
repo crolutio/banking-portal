@@ -5,7 +5,7 @@ import { getAgentPersona } from "@/lib/ai/agents"
 
 export const runtime = "nodejs"
 
-async function fetchData(table: string, userId: string, column = "user_id") {
+async function fetchData(table: string, userId: string, column = "customer_id") {
   const supabase = createDirectClient()
   try {
     const { data, error } = await supabase.from(table).select("*").eq(column, userId)

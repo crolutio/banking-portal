@@ -60,7 +60,7 @@ async function fetchTableByUser(
   supabase: any,
   table: string,
   userId: string,
-  column: string = "user_id",
+  column: string = "customer_id",
 ): Promise<any[]> {
   console.log(`[vapi-data-handler] Fetching ${table} for userId: ${userId}`)
   const { data, error } = await supabase.from(table).select("*").eq(column, userId)

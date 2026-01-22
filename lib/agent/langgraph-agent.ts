@@ -384,7 +384,7 @@ Respond ONLY with valid JSON:
 }
 
 // Decision node: Decide if we need more information or can answer
-function shouldContinueNode(state: AgentState): "continue" | "answer" {
+function shouldContinueNode(state: any): "continue" | "answer" {
   // For voice mode with data, always go to answer
   if (state.isVoice && state.allData) {
     return "answer"

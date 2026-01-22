@@ -30,8 +30,6 @@ import Image from "next/image"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useTheme } from "next-themes"
 import { Card } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { VapiVoiceButton } from "@/components/ai/vapi-voice-button"
 import VapiBase from "@vapi-ai/web"
 
@@ -988,24 +986,7 @@ export function FloatingChatBubble() {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="p-4 border-t bg-background space-y-3">
-        {/* Voice Assist Toggle */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="voice-assist"
-              checked={voiceAssistEnabled}
-              onCheckedChange={setVoiceAssistEnabled}
-            />
-            <Label htmlFor="voice-assist" className="text-sm font-medium cursor-pointer">
-              Voice Assist
-            </Label>
-          </div>
-          <span className="text-xs text-muted-foreground">
-            {voiceAssistEnabled ? "Hybrid mode: Chat + Voice summary" : "Text chat only"}
-          </span>
-        </div>
-        
+      <div className="p-4 border-t bg-background">
         <form
           onSubmit={(e) => {
             e.preventDefault()

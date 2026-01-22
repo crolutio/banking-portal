@@ -32,7 +32,7 @@ function getPageSpecificContext(page: string): string {
 }
 
 // Helper to safely fetch data
-async function fetchData(table: string, userId: string, column = "user_id") {
+async function fetchData(table: string, userId: string, column = "customer_id") {
   const supabase = createDirectClient()
   try {
     const { data, error } = await supabase

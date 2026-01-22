@@ -12,7 +12,7 @@ function toNumber(value: any): number {
 async function fetchTableByUser<T = any>(
   table: string,
   userId: string,
-  column: string = "user_id",
+  column: string = "customer_id",
 ): Promise<T[]> {
   const supabase = createDirectClient()
   console.log(`[agent/tools] Fetching ${table} for userId: ${userId}, column: ${column}`)

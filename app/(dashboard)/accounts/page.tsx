@@ -489,7 +489,7 @@ export default function AccountsPage() {
       const { data: accountsData, error: accountsError } = await supabase
         .from("accounts")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       // #region agent log
       if (typeof window !== "undefined") {
@@ -529,7 +529,7 @@ export default function AccountsPage() {
       
       const mappedAccounts: Account[] = (accountsData || []).map((a: any) => ({
         id: a.id,
-        userId: a.user_id,
+        userId: a.customer_id,
         name: a.name,
         type: a.type,
         currency: a.currency,

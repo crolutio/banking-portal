@@ -84,13 +84,13 @@ export default function LoansPage() {
       const { data: loansData, error: loansError } = await supabase
         .from("loans")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       if (loansError) console.error("Error fetching loans:", loansError)
 
       const mappedLoans: Loan[] = (loansData || []).map((l: any) => ({
         id: l.id,
-        userId: l.user_id,
+        userId: l.customer_id,
         type: l.type,
         amount: Number(l.principal_amount),
         remainingBalance: Number(l.remaining_balance),

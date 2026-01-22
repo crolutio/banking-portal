@@ -281,7 +281,7 @@ function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onO
       const { data, error } = await supabase
         .from('savings_goals')
         .insert({
-          user_id: currentBankingUserId,
+          customer_id: currentBankingUserId,
           name: customGoal.name,
           category: customGoal.category,
           target_amount: customGoal.targetAmount,
@@ -716,13 +716,13 @@ export default function SavingsGoalsPage() {
       const { data: goalsData, error: goalsError } = await supabase
         .from("savings_goals")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       if (goalsError) console.error("Error fetching savings goals:", goalsError)
 
       const mappedGoals: SavingsGoal[] = (goalsData || []).map((g: any) => ({
         id: g.id,
-        userId: g.user_id,
+        userId: g.customer_id,
         name: g.name,
         category: g.category,
         targetAmount: Number(g.target_amount),
@@ -743,13 +743,13 @@ export default function SavingsGoalsPage() {
       const { data: accountsData, error: accountsError } = await supabase
         .from("accounts")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       if (accountsError) console.error("Error fetching accounts:", accountsError)
 
       const mappedAccounts: Account[] = (accountsData || []).map((a: any) => ({
         id: a.id,
-        userId: a.user_id,
+        userId: a.customer_id,
         name: a.name,
         type: a.type,
         currency: a.currency,

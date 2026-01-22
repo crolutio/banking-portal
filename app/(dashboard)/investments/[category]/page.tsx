@@ -157,7 +157,7 @@ export default function InvestmentCategoryPage() {
       const { data, error } = await supabase
         .from("portfolio_holdings")
         .select("*")
-        .eq("user_id", currentBankingUserId)
+        .eq("customer_id", currentBankingUserId)
 
       if (error) {
         console.error("Error fetching holdings:", error)
@@ -168,7 +168,7 @@ export default function InvestmentCategoryPage() {
         // Map to UI model
         const mapped = filtered.map((h: any) => ({
             id: h.id,
-            userId: h.user_id,
+            userId: h.customer_id,
             symbol: h.symbol,
             name: h.name,
             type: h.type,

@@ -91,15 +91,56 @@ export default function SupportPage() {
   }, [messages])
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true)
+  const isUserScrollingRef = useRef(false)
 
-  // Auto-scroll when messages change or when waiting for reply
+  // Auto-scroll when messages change or when waiting for reply, but only if enabled
   useEffect(() => {
+    if (!isAutoScrollEnabled) return
+
     // Small timeout to allow the DOM to update and ScrollArea to recalculate
     const timeoutId = setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
     }, 100)
     return () => clearTimeout(timeoutId)
-  }, [uniqueMessages, waitingForReply])
+  }, [uniqueMessages, waitingForReply, isAutoScrollEnabled])
+
+  // Handle scroll detection to stop/resume auto-scroll
+  useEffect(() => {
+    const scrollContainer = scrollAreaRef.current?.querySelector('[data-radix-scroll-area-viewport]')
+    if (!scrollContainer) return
+
+    const handleScroll = () => {
+      if (isUserScrollingRef.current) return
+      
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight
+      
+      // Consider "at bottom" if within 50px of the bottom
+      const isAtBottom = distanceFromBottom < 50
+      
+      if (isAtBottom && !isAutoScrollEnabled) {
+        setIsAutoScrollEnabled(true)
+      } else if (!isAtBottom && isAutoScrollEnabled) {
+        setIsAutoScrollEnabled(false)
+      }
+    }
+
+    scrollContainer.addEventListener('scroll', handleScroll)
+    return () => scrollContainer.removeEventListener('scroll', handleScroll)
+  }, [isAutoScrollEnabled])
+
+  // Mark when auto-scroll is triggered to avoid interfering with scroll detection
+  useEffect(() => {
+    if (isAutoScrollEnabled) {
+      isUserScrollingRef.current = true
+      const timeoutId = setTimeout(() => {
+        isUserScrollingRef.current = false
+      }, 200)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [uniqueMessages, waitingForReply, isAutoScrollEnabled])
 
   const handleSendMessage = async () => {
     if (!selectedConversation) return
@@ -469,7 +510,7 @@ export default function SupportPage() {
                   </CardHeader>
 
                   <div className="flex-1 overflow-hidden min-h-0">
-                    <ScrollArea className="h-full p-4">
+                    <ScrollArea className="h-full p-4" ref={scrollAreaRef}>
                       <div className="space-y-4">
                         {uniqueMessages.map((m, idx) => {
                           const isUser = m.sender_type === "customer"

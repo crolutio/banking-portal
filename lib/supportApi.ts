@@ -136,6 +136,53 @@ export async function sendCustomerMessage(args: {
     throw new Error(`Failed to send message: ${error.message}`);
   }
 
+  let aiReply: string | null = null;
+  let aiMessageId: string | null = null;
+
+  try {
+    const aiResponse = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: args.content }],
+        userId: args.sender_customer_id,
+        agentId: "support",
+        currentPage: "/support",
+      }),
+    });
+
+    if (aiResponse.ok) {
+      aiReply = (await aiResponse.text()).trim();
+      if (aiReply) {
+        const { data: aiMessage, error: aiError } = await supabase
+          .from("messages")
+          .insert({
+            conversation_id: args.conversation_id,
+            sender_type: "ai",
+            sender_customer_id: null,
+            sender_agent_id: null,
+            content: aiReply,
+            is_internal: false,
+            source: "banking",
+            channel: args.channel ?? "chat",
+            created_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (!aiError) {
+          aiMessageId = aiMessage?.id ?? null;
+        } else {
+          console.error("[Support API] AI message insert error:", aiError);
+        }
+      }
+    } else {
+      console.error("[Support API] AI chat error:", await aiResponse.text());
+    }
+  } catch (aiErr) {
+    console.error("[Support API] AI chat request failed:", aiErr);
+  }
+
   console.log(`[Support API] ${endpoint} - Success:`, {
     status: "200 OK",
     message_id: data?.id,
@@ -145,8 +192,8 @@ export async function sendCustomerMessage(args: {
   return {
     status: "ai", // Default to AI processing
     customer_message_id: data.id,
-    ai_reply: null,
-    ai_message_id: null,
+    ai_reply: aiReply,
+    ai_message_id: aiMessageId,
   };
 }
 

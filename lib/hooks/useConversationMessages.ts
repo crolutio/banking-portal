@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { DbMessage } from "../types";
-import { sendCustomerMessage } from "@/lib/supportApi";
+import { requestConversationHandover, sendCustomerMessage } from "@/lib/supportApi";
 import { createClient } from "../supabase/client";
 import { subscribeToConversationMessages } from "../realtime";
 
@@ -17,6 +17,18 @@ export function useConversationMessages(params: {
   const [waitingForReply, setWaitingForReply] = useState(false);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const lastAiMessageIdRef = useRef<string | null>(null);
+
+  function isEscalationIntent(text: string) {
+    const normalized = text.toLowerCase();
+    return (
+      normalized.includes("escalate") ||
+      normalized.includes("human") ||
+      normalized.includes("agent") ||
+      normalized.includes("representative") ||
+      normalized.includes("real person") ||
+      normalized.includes("speak to someone")
+    );
+  }
 
   // Load history
   useEffect(() => {
@@ -91,6 +103,8 @@ export function useConversationMessages(params: {
     const trimmed = content.trim();
     if (!trimmed) return;
 
+    const shouldEscalate = isEscalationIntent(trimmed);
+
     // Generate temporary ID for optimistic message
     const tempId = `temp-${Date.now()}-${Math.random()}`;
     const seen = seenIdsRef.current;
@@ -119,7 +133,12 @@ export function useConversationMessages(params: {
         conversation_id: conversationId,
         sender_customer_id: customerId,
         content: trimmed,
+        suppressAi: shouldEscalate,
       });
+
+      if (shouldEscalate) {
+        await requestConversationHandover({ conversation_id: conversationId, channel: "chat" });
+      }
 
       // Replace optimistic message with real one
       seen.add(response.customer_message_id);
@@ -143,7 +162,7 @@ export function useConversationMessages(params: {
         const aiMessage: DbMessage = {
           id: response.ai_message_id,
           conversation_id: conversationId,
-          sender_type: "agent",
+          sender_type: "ai",
           sender_customer_id: null,
           sender_agent_id: null,
           content: response.ai_reply,

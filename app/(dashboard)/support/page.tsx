@@ -165,6 +165,8 @@ export default function SupportPage() {
       // select it immediately so message hook points at it
       setSelectedConversation(conv)
 
+      setNewTicketDialog(false)
+
       // send first message
       await sendCustomerMessage({
         conversation_id: conv.id,
@@ -172,7 +174,6 @@ export default function SupportPage() {
         content: firstMsg,
       })
 
-      setNewTicketDialog(false)
       setNewTicketSubject("")
       setNewTicketMessage("")
       setNewTicketPriority("medium")

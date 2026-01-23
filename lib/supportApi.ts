@@ -7,6 +7,15 @@ export async function createConversation(args: {
   priority?: string;
   channel?: string;
 }): Promise<DbConversation> {
+  const endpoint = "POST /api/conversations (Supabase: conversations.insert)";
+  console.log(`[Support API] Calling: ${endpoint}`);
+  console.log(`[Support API] Request data:`, {
+    customer_id: args.customer_id,
+    subject: args.subject,
+    channel: args.channel ?? "app",
+    priority: args.priority ?? "medium",
+  });
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from("conversations")
@@ -21,13 +30,29 @@ export async function createConversation(args: {
     .single();
 
   if (error) {
+    console.error(`[Support API] ${endpoint} - Error:`, {
+      status: "ERROR",
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
     throw new Error(`Failed to create conversation: ${error.message}`);
   }
+
+  console.log(`[Support API] ${endpoint} - Success:`, {
+    status: "200 OK",
+    conversation_id: data?.id,
+  });
 
   return data as DbConversation;
 }
 
 export async function fetchMessages(conversationId: string): Promise<DbMessage[]> {
+  const endpoint = `GET /api/conversations/${conversationId}/messages (Supabase: messages.select)`;
+  console.log(`[Support API] Calling: ${endpoint}`);
+  console.log(`[Support API] Request params:`, { conversationId });
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from("messages")
@@ -36,8 +61,20 @@ export async function fetchMessages(conversationId: string): Promise<DbMessage[]
     .order("created_at", { ascending: true });
 
   if (error) {
+    console.error(`[Support API] ${endpoint} - Error:`, {
+      status: "ERROR",
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
     throw new Error(`Failed to fetch messages: ${error.message}`);
   }
+
+  console.log(`[Support API] ${endpoint} - Success:`, {
+    status: "200 OK",
+    message_count: data?.length ?? 0,
+  });
 
   return (data ?? []) as DbMessage[];
 }
@@ -54,6 +91,15 @@ export async function sendCustomerMessage(args: {
   sender_customer_id: string;
   content: string;
 }): Promise<CustomerMessageResponse> {
+  const endpoint = "POST /api/messages (Supabase: messages.insert)";
+  console.log(`[Support API] Calling: ${endpoint}`);
+  console.log(`[Support API] Request data:`, {
+    conversation_id: args.conversation_id,
+    sender_customer_id: args.sender_customer_id,
+    content_length: args.content.length,
+    content_preview: args.content.substring(0, 100) + (args.content.length > 100 ? "..." : ""),
+  });
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from("messages")
@@ -69,8 +115,21 @@ export async function sendCustomerMessage(args: {
     .single();
 
   if (error) {
+    console.error(`[Support API] ${endpoint} - Error:`, {
+      status: "ERROR",
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
     throw new Error(`Failed to send message: ${error.message}`);
   }
+
+  console.log(`[Support API] ${endpoint} - Success:`, {
+    status: "200 OK",
+    message_id: data?.id,
+    response_status: "ai",
+  });
 
   return {
     status: "ai", // Default to AI processing
@@ -86,6 +145,15 @@ export async function sendAgentMessage(args: {
   content: string;
   is_internal?: boolean;
 }): Promise<DbMessage> {
+  const endpoint = "POST /api/messages (Supabase: messages.insert - agent)";
+  console.log(`[Support API] Calling: ${endpoint}`);
+  console.log(`[Support API] Request data:`, {
+    conversation_id: args.conversation_id,
+    sender_agent_id: args.sender_agent_id,
+    is_internal: !!args.is_internal,
+    content_length: args.content.length,
+  });
+
   const supabase = createClient();
   const { data, error } = await supabase
     .from("messages")
@@ -101,8 +169,20 @@ export async function sendAgentMessage(args: {
     .single();
 
   if (error) {
+    console.error(`[Support API] ${endpoint} - Error:`, {
+      status: "ERROR",
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
     throw new Error(`Failed to send agent message: ${error.message}`);
   }
+
+  console.log(`[Support API] ${endpoint} - Success:`, {
+    status: "200 OK",
+    message_id: data?.id,
+  });
 
   return data as DbMessage;
 }

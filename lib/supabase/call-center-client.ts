@@ -5,16 +5,21 @@ const SUPABASE_ANON_KEY =
   process.env.NEXT_PUBLIC_CALL_CENTER_SUPABASE_ANON_KEY ??
   process.env.NEXT_PUBLIC_CALL_CENTER_SUPABASE_PUBLISHABLE_DEFAULT_KEY
 
+let cachedClient: ReturnType<typeof createSupabaseClient> | null = null
+
 export function createCallCenterClient() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     throw new Error(
       "Missing NEXT_PUBLIC_CALL_CENTER_SUPABASE_URL or NEXT_PUBLIC_CALL_CENTER_SUPABASE_ANON_KEY"
     )
   }
-  return createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  if (cachedClient) return cachedClient
+  cachedClient = createSupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
-      persistSession: true,
-      autoRefreshToken: true,
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
     },
   })
+  return cachedClient
 }

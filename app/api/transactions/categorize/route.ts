@@ -57,10 +57,23 @@ export async function POST() {
 
   for (let i = 0; i < updates.length; i += BATCH_SIZE) {
     const batch = updates.slice(i, i + BATCH_SIZE)
-    const { error: updateError } = await supabase.from("transactions").upsert(batch)
-    if (updateError) {
-      console.error("[categorize] Failed to upsert batch", updateError.message)
-      return NextResponse.json({ error: "Failed to update categories" }, { status: 500 })
+    // Use update instead of upsert since we're only updating existing records
+    // Process each update individually to avoid null account_id constraint violations
+    for (const update of batch) {
+      const { error: updateError } = await supabase
+        .from("transactions")
+        .update({
+          category: update.category,
+          category_source: update.category_source,
+          category_confidence: update.category_confidence,
+          category_reason: update.category_reason,
+        })
+        .eq("id", update.id)
+      
+      if (updateError) {
+        console.error("[categorize] Failed to update transaction", update.id, updateError.message)
+        // Continue with other updates instead of failing completely
+      }
     }
   }
 

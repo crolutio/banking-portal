@@ -345,7 +345,7 @@ Result: $200-300/month in savings identified
 ### Environment Variables Required
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+NEXT_PUBLIC_BANKING_SUPABASE_PUBLISHABLE_DEFAULT_KEY=your_anon_key
 GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_key
 ```
 

@@ -64,10 +64,21 @@ export async function POST() {
   // Batch update
   for (let i = 0; i < updates.length; i += BATCH_SIZE) {
     const batch = updates.slice(i, i + BATCH_SIZE)
-    const { error: updateError } = await supabase.from("transactions").upsert(batch)
-    if (updateError) {
-      console.error("[detect-unusual] Failed to upsert batch", updateError.message)
-      return NextResponse.json({ error: "Failed to update flags" }, { status: 500 })
+    // Use update instead of upsert since we're only updating existing records
+    // Process each update individually to avoid null account_id constraint violations
+    for (const update of batch) {
+      const { error: updateError } = await supabase
+        .from("transactions")
+        .update({
+          is_unusual: update.is_unusual,
+          unusual_reason: update.unusual_reason,
+        })
+        .eq("id", update.id)
+      
+      if (updateError) {
+        console.error("[detect-unusual] Failed to update transaction", update.id, updateError.message)
+        // Continue with other updates instead of failing completely
+      }
     }
   }
 

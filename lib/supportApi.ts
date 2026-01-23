@@ -1,5 +1,10 @@
 import type { DbConversation, DbMessage } from "./types";
-import { createClient } from "./supabase/client";
+
+const SUPPORT_API_BASE_URL = process.env.NEXT_PUBLIC_SUPPORT_API_BASE_URL;
+
+if (!SUPPORT_API_BASE_URL) {
+  console.warn("[Support API] NEXT_PUBLIC_SUPPORT_API_BASE_URL is not set");
+}
 
 export async function createConversation(args: {
   customer_id: string;
@@ -7,7 +12,7 @@ export async function createConversation(args: {
   priority?: string;
   channel?: string;
 }): Promise<DbConversation> {
-  const endpoint = "POST /api/conversations (Supabase: conversations.insert)";
+  const endpoint = "POST /conversations";
   console.log(`[Support API] Calling: ${endpoint}`);
   console.log(`[Support API] Request data:`, {
     customer_id: args.customer_id,
@@ -16,30 +21,35 @@ export async function createConversation(args: {
     priority: args.priority ?? "medium",
   });
 
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("conversations")
-    .insert({
+  if (!SUPPORT_API_BASE_URL) {
+    throw new Error("NEXT_PUBLIC_SUPPORT_API_BASE_URL is not configured");
+  }
+
+  const response = await fetch(`${SUPPORT_API_BASE_URL}/conversations`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
       customer_id: args.customer_id,
       subject: args.subject ?? null,
       channel: args.channel ?? "app",
       priority: args.priority ?? "medium",
       status: "open",
-    })
-    .select()
-    .single();
+    }),
+  });
 
-  if (error) {
+  if (!response.ok) {
+    const errorText = await response.text();
     console.error(`[Support API] ${endpoint} - Error:`, {
-      status: "ERROR",
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText,
     });
-    throw new Error(`Failed to create conversation: ${error.message}`);
+    throw new Error(`Failed to create conversation: ${response.statusText}`);
   }
 
+  const data = await response.json();
   console.log(`[Support API] ${endpoint} - Success:`, {
     status: "200 OK",
     conversation_id: data?.id,
@@ -49,34 +59,38 @@ export async function createConversation(args: {
 }
 
 export async function fetchMessages(conversationId: string): Promise<DbMessage[]> {
-  const endpoint = `GET /api/conversations/${conversationId}/messages (Supabase: messages.select)`;
+  const endpoint = `GET /conversations/${conversationId}/messages`;
   console.log(`[Support API] Calling: ${endpoint}`);
   console.log(`[Support API] Request params:`, { conversationId });
 
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("messages")
-    .select("*")
-    .eq("conversation_id", conversationId)
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error(`[Support API] ${endpoint} - Error:`, {
-      status: "ERROR",
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-    });
-    throw new Error(`Failed to fetch messages: ${error.message}`);
+  if (!SUPPORT_API_BASE_URL) {
+    throw new Error("NEXT_PUBLIC_SUPPORT_API_BASE_URL is not configured");
   }
 
-  console.log(`[Support API] ${endpoint} - Success:`, {
-    status: "200 OK",
-    message_count: data?.length ?? 0,
+  const response = await fetch(`${SUPPORT_API_BASE_URL}/conversations/${conversationId}/messages`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
   });
 
-  return (data ?? []) as DbMessage[];
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[Support API] ${endpoint} - Error:`, {
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText,
+    });
+    throw new Error(`Failed to fetch messages: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  console.log(`[Support API] ${endpoint} - Success:`, {
+    status: "200 OK",
+    message_count: Array.isArray(data) ? data.length : 0,
+  });
+
+  return (Array.isArray(data) ? data : []) as DbMessage[];
 }
 
 export type CustomerMessageResponse = {
@@ -91,7 +105,7 @@ export async function sendCustomerMessage(args: {
   sender_customer_id: string;
   content: string;
 }): Promise<CustomerMessageResponse> {
-  const endpoint = "POST /api/messages (Supabase: messages.insert)";
+  const endpoint = "POST /messages";
   console.log(`[Support API] Calling: ${endpoint}`);
   console.log(`[Support API] Request data:`, {
     conversation_id: args.conversation_id,
@@ -100,42 +114,47 @@ export async function sendCustomerMessage(args: {
     content_preview: args.content.substring(0, 100) + (args.content.length > 100 ? "..." : ""),
   });
 
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("messages")
-    .insert({
+  if (!SUPPORT_API_BASE_URL) {
+    throw new Error("NEXT_PUBLIC_SUPPORT_API_BASE_URL is not configured");
+  }
+
+  const response = await fetch(`${SUPPORT_API_BASE_URL}/messages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
       conversation_id: args.conversation_id,
       sender_type: "customer",
       sender_customer_id: args.sender_customer_id,
       sender_agent_id: null,
       content: args.content,
       is_internal: false,
-    })
-    .select()
-    .single();
+    }),
+  });
 
-  if (error) {
+  if (!response.ok) {
+    const errorText = await response.text();
     console.error(`[Support API] ${endpoint} - Error:`, {
-      status: "ERROR",
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText,
     });
-    throw new Error(`Failed to send message: ${error.message}`);
+    throw new Error(`Failed to send message: ${response.statusText}`);
   }
 
+  const data = await response.json();
   console.log(`[Support API] ${endpoint} - Success:`, {
     status: "200 OK",
-    message_id: data?.id,
-    response_status: "ai",
+    message_id: data?.customer_message_id,
+    response_status: data?.status || "ai",
   });
 
   return {
-    status: "ai", // Default to AI processing
-    customer_message_id: data.id,
-    ai_reply: null,
-    ai_message_id: null,
+    status: data.status || "ai",
+    customer_message_id: data.customer_message_id,
+    ai_reply: data.ai_reply || null,
+    ai_message_id: data.ai_message_id || null,
   };
 }
 
@@ -145,7 +164,7 @@ export async function sendAgentMessage(args: {
   content: string;
   is_internal?: boolean;
 }): Promise<DbMessage> {
-  const endpoint = "POST /api/messages (Supabase: messages.insert - agent)";
+  const endpoint = "POST /messages (agent)";
   console.log(`[Support API] Calling: ${endpoint}`);
   console.log(`[Support API] Request data:`, {
     conversation_id: args.conversation_id,
@@ -154,31 +173,36 @@ export async function sendAgentMessage(args: {
     content_length: args.content.length,
   });
 
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("messages")
-    .insert({
+  if (!SUPPORT_API_BASE_URL) {
+    throw new Error("NEXT_PUBLIC_SUPPORT_API_BASE_URL is not configured");
+  }
+
+  const response = await fetch(`${SUPPORT_API_BASE_URL}/messages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
       conversation_id: args.conversation_id,
       sender_type: "agent",
       sender_customer_id: null,
       sender_agent_id: args.sender_agent_id,
       content: args.content,
       is_internal: !!args.is_internal,
-    })
-    .select()
-    .single();
+    }),
+  });
 
-  if (error) {
+  if (!response.ok) {
+    const errorText = await response.text();
     console.error(`[Support API] ${endpoint} - Error:`, {
-      status: "ERROR",
-      code: error.code,
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
+      status: response.status,
+      statusText: response.statusText,
+      body: errorText,
     });
-    throw new Error(`Failed to send agent message: ${error.message}`);
+    throw new Error(`Failed to send agent message: ${response.statusText}`);
   }
 
+  const data = await response.json();
   console.log(`[Support API] ${endpoint} - Success:`, {
     status: "200 OK",
     message_id: data?.id,

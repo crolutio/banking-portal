@@ -1,5 +1,5 @@
 import type { DbConversation, DbMessage } from "./types";
-import { createClient } from "./supabase/client";
+import { createCallCenterClient } from "./supabase/call-center-client";
 
 export async function createConversation(args: {
   customer_id: string;
@@ -16,7 +16,7 @@ export async function createConversation(args: {
     priority: args.priority ?? "medium",
   });
 
-  const supabase = createClient();
+  const supabase = createCallCenterClient();
   const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("conversations")
@@ -58,7 +58,7 @@ export async function fetchMessages(conversationId: string): Promise<DbMessage[]
   console.log(`[Support API] Calling: ${endpoint}`);
   console.log(`[Support API] Request params:`, { conversationId });
 
-  const supabase = createClient();
+  const supabase = createCallCenterClient();
   const { data, error } = await supabase
     .from("messages")
     .select("*")
@@ -108,7 +108,7 @@ export async function sendCustomerMessage(args: {
     content_preview: args.content.substring(0, 100) + (args.content.length > 100 ? "..." : ""),
   });
 
-  const supabase = createClient();
+  const supabase = createCallCenterClient();
   const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("messages")
@@ -217,7 +217,7 @@ export async function sendAgentMessage(args: {
     content_length: args.content.length,
   });
 
-  const supabase = createClient();
+  const supabase = createCallCenterClient();
   const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("messages")
@@ -258,7 +258,7 @@ export async function requestConversationHandover(args: {
   conversation_id: string;
   channel?: string;
 }): Promise<DbConversation> {
-  const supabase = createClient();
+  const supabase = createCallCenterClient();
   const now = new Date().toISOString();
 
   const { data: conversation, error: updateError } = await supabase

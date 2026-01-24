@@ -59,11 +59,28 @@ export async function fetchMessages(conversationId: string): Promise<DbMessage[]
   console.log(`[Support API] Request params:`, { conversationId });
 
   const supabase = createCallCenterClient();
+
+  // First check if conversation has handover required
+  const { data: conversation, error: convError } = await supabase
+    .from("conversations")
+    .select("handover_required")
+    .eq("id", conversationId)
+    .single();
+
+  if (convError) {
+    console.warn(`[Support API] ${endpoint} - Could not check handover status:`, convError);
+  }
+
+  const hasHandover = conversation?.handover_required === true;
+
+  // Load messages from banking source, and contact_center source if handover occurred
+  const sourcesToLoad = hasHandover ? ["banking", "contact_center"] : ["banking"];
+
   const { data, error } = await supabase
     .from("messages")
     .select("*")
     .eq("conversation_id", conversationId)
-    .eq("source", "banking")
+    .in("source", sourcesToLoad)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -80,6 +97,7 @@ export async function fetchMessages(conversationId: string): Promise<DbMessage[]
   console.log(`[Support API] ${endpoint} - Success:`, {
     status: "200 OK",
     message_count: data?.length ?? 0,
+    sources_loaded: sourcesToLoad,
   });
 
   return (data ?? []) as DbMessage[];

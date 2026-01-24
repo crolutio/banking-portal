@@ -15,7 +15,13 @@ export function subscribeToConversationMessages(
         table: "messages",
         filter: `conversation_id=eq.${conversationId}`,
       },
-      (payload) => onNewMessage(payload.new)
+      (payload) => {
+        const message = payload.new;
+        // Only process messages that are not internal and from supported sources
+        if (!message.is_internal && (message.source === "banking" || message.source === "contact_center")) {
+          onNewMessage(message);
+        }
+      }
     )
     .subscribe((status) => {
       console.log("[realtime] status:", status, "conversation:", conversationId);

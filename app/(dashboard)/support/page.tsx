@@ -456,10 +456,10 @@ export default function SupportPage() {
       </div>
 
       {/* Support Interface */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Main content area - Support Interface - 3 columns */}
         <div className="lg:col-span-3">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[500px]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
             {/* Ticket List */}
             <Card className="lg:col-span-1 flex flex-col h-full">
               <CardHeader className="pb-3">
@@ -495,7 +495,7 @@ export default function SupportPage() {
             </Card>
 
             {/* Chat Window */}
-            <Card className="lg:col-span-2 flex flex-col min-h-0">
+            <Card className="lg:col-span-2 flex flex-col h-full min-h-0">
               {selectedConversation ? (
                 <>
                   <CardHeader className="pb-3 border-b">

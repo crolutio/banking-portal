@@ -21,6 +21,19 @@ import {
 import { useRole } from "@/lib/role-context"
 import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts"
+import {
   MessageSquare,
   Send,
   Bot,
@@ -37,6 +50,8 @@ import type { DbConversation, DbMessage } from "@/lib/types"
 import { useCustomerConversations } from "@/lib/hooks/useCustomerConversations"
 import { useConversationMessages } from "@/lib/hooks/useConversationMessages"
 import { createConversation, requestConversationHandover, sendCustomerMessage } from "@/lib/supportApi"
+
+const CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"]
 
 
 export default function SupportPage() {
@@ -273,8 +288,56 @@ export default function SupportPage() {
     return { headers, rows }
   }
 
-  const renderMessageContent = (content: string) => {
-    const lines = content.split("\n")
+  const renderChart = (data: { type?: string; data?: Array<{ name: string; value: number }> }) => {
+    if (!data?.data || data.data.length === 0) return null
+    if (data.type === "bar") {
+      return (
+        <div className="w-full h-[200px] mt-2 mb-4">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data.data}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis fontSize={12} tickLine={false} axisLine={false} />
+              <RechartsTooltip
+                cursor={{ fill: "rgba(0,0,0,0.05)" }}
+                contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }}
+              />
+              <Bar dataKey="value" fill="#000000" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )
+    }
+    if (data.type === "pie") {
+      return (
+        <div className="w-full h-[200px] mt-2 mb-4 flex items-center justify-center">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={data.data}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={80}
+                paddingAngle={5}
+                dataKey="value"
+              >
+                {data.data.map((entry, index) => (
+                  <Cell key={`cell-${entry.name}-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                ))}
+              </Pie>
+              <RechartsTooltip />
+              <Legend verticalAlign="bottom" height={36} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )
+    }
+    return null
+  }
+
+  const renderTextWithTables = (text: string) => {
+    const lines = text.split("\n")
     const blocks: Array<{ type: "text" | "table"; lines: string[] }> = []
     let current: { type: "text" | "table"; lines: string[] } | null = null
 
@@ -333,6 +396,38 @@ export default function SupportPage() {
     )
   }
 
+  const renderMessageContent = (content: string) => {
+    const parts = content.split(/(```chart[\s\S]*?```|`?chart\s*\{[\s\S]*?\}\s*`?)/g)
+    return (
+      <div className="space-y-3">
+        {parts.map((part, idx) => {
+          const trimmed = part.trim()
+          if (!trimmed) return null
+
+          if (trimmed.startsWith("```chart")) {
+            try {
+              const jsonStr = trimmed.replace(/^```chart\s*/i, "").replace(/```$/i, "")
+              return <div key={idx}>{renderChart(JSON.parse(jsonStr))}</div>
+            } catch (err) {
+              return <div key={idx}>{renderTextWithTables(part)}</div>
+            }
+          }
+
+          if (trimmed.startsWith("`chart") || trimmed.startsWith("chart")) {
+            try {
+              const jsonStr = trimmed.replace(/^`?chart\s*/i, "").replace(/`$/, "")
+              return <div key={idx}>{renderChart(JSON.parse(jsonStr))}</div>
+            } catch (err) {
+              return <div key={idx}>{renderTextWithTables(part)}</div>
+            }
+          }
+
+          return <div key={idx}>{renderTextWithTables(part)}</div>
+        })}
+      </div>
+    )
+  }
+
   // AI Banker questions relevant to support page
   const aiQuestions = [
     "How do I dispute a transaction?",
@@ -343,7 +438,7 @@ export default function SupportPage() {
   ]
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="flex flex-col h-full overflow-hidden space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Support</h1>
@@ -456,12 +551,12 @@ export default function SupportPage() {
       </div>
 
       {/* Support Interface */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
         {/* Main content area - Support Interface - 3 columns */}
-        <div className="lg:col-span-3">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+        <div className="lg:col-span-3 min-h-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0">
             {/* Ticket List */}
-            <Card className="lg:col-span-1 flex flex-col h-full">
+            <Card className="lg:col-span-1 flex flex-col h-full min-h-0">
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">Your Tickets</CardTitle>
               </CardHeader>

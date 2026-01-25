@@ -30,6 +30,9 @@ export function useConversationMessages(params: {
     );
   }
 
+  const lastLoadStartedAtRef = useRef<number>(0);
+  const lastSendAtRef = useRef<number>(0);
+
   // Load history
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +43,7 @@ export function useConversationMessages(params: {
         seenIdsRef.current = new Set();
         return;
       }
+      lastLoadStartedAtRef.current = Date.now();
       let history: DbMessage[] = [];
       try {
         const supabase = createCallCenterClient();
@@ -64,7 +68,18 @@ export function useConversationMessages(params: {
       for (const m of filteredHistory) seen.add(m.id);
       seenIdsRef.current = seen;
 
-      setMessages(filteredHistory);
+      setMessages((prev) => {
+        // If a send happened after this load started, merge to avoid clobbering optimistic messages.
+        if (lastSendAtRef.current > lastLoadStartedAtRef.current) {
+          const merged = new Map<string, DbMessage>();
+          for (const msg of prev) merged.set(msg.id, msg);
+          for (const msg of filteredHistory) merged.set(msg.id, msg);
+          return Array.from(merged.values()).sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+        }
+        return filteredHistory;
+      });
     }
 
     load().catch((e) => console.error("[useConversationMessages] load error", e));
@@ -103,6 +118,7 @@ export function useConversationMessages(params: {
     if (!trimmed) return;
 
     const shouldEscalate = isEscalationIntent(trimmed);
+    lastSendAtRef.current = Date.now();
 
     // Generate temporary ID for optimistic message
     const tempId = `temp-${Date.now()}-${Math.random()}`;

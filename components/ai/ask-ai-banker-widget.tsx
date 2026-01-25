@@ -83,8 +83,8 @@ export function AskAIBankerWidget({
                       <card.icon className="h-3 w-3 text-primary" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-sm">{card.title}</p>
-                      <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+                      <p className="font-medium text-base">{card.title}</p>
+                      <p className="text-sm text-muted-foreground">{card.subtitle}</p>
                     </div>
                   </CardContent>
                 </Card>

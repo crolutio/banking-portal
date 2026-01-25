@@ -133,6 +133,8 @@ export function useConversationMessages(params: {
         sender_customer_id: customerId,
         content: trimmed,
         suppressAi: shouldEscalate,
+        channel: "chat",
+        provider: "app",
       });
 
       if (shouldEscalate) {

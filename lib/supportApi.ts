@@ -6,6 +6,9 @@ export async function createConversation(args: {
   subject?: string;
   priority?: string;
   channel?: string;
+  last_message?: string;
+  provider?: string;
+  provider_conversation_id?: string;
 }): Promise<DbConversation> {
   const endpoint = "POST /api/conversations (Supabase: conversations.insert)";
   console.log(`[Support API] Calling: ${endpoint}`);
@@ -18,6 +21,7 @@ export async function createConversation(args: {
 
   const supabase = createCallCenterClient();
   const now = new Date().toISOString();
+  const slaDeadline = new Date(Date.now() + 30 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("conversations")
     .insert({
@@ -25,9 +29,21 @@ export async function createConversation(args: {
       subject: args.subject ?? null,
       channel: args.channel ?? "chat",
       priority: args.priority ?? "medium",
-      status: "open",
+      status: "active",
+      sentiment: "neutral",
+      sentiment_score: 0.5,
+      sla_deadline: slaDeadline,
+      sla_remaining: 30,
+      sla_status: "healthy",
+      queue: "General Support",
+      topic: "Incoming Message",
+      last_message: args.last_message ?? null,
       source: "banking",
       industry: "banking",
+      provider: args.provider ?? "twilio",
+      provider_conversation_id: args.provider_conversation_id ?? null,
+      handling_mode: "ai",
+      handover_required: false,
       start_time: now,
       last_message_time: now,
     })
@@ -96,6 +112,12 @@ export async function sendCustomerMessage(args: {
   sender_customer_id: string;
   content: string;
   channel?: string;
+  provider?: string;
+  provider_message_id?: string;
+  from_address?: string;
+  to_address?: string;
+  status?: "received" | "sent";
+  metadata?: Record<string, unknown> | null;
   suppressAi?: boolean;
 }): Promise<CustomerMessageResponse> {
   const endpoint = "POST /api/messages (Supabase: messages.insert)";
@@ -120,6 +142,12 @@ export async function sendCustomerMessage(args: {
       is_internal: false,
       source: "banking",
       channel: args.channel ?? "chat",
+      provider: args.provider ?? "twilio",
+      provider_message_id: args.provider_message_id ?? null,
+      from_address: args.from_address ?? null,
+      to_address: args.to_address ?? null,
+      status: args.status ?? "received",
+      metadata: args.metadata ?? null,
       created_at: now,
     })
     .select()
@@ -138,6 +166,19 @@ export async function sendCustomerMessage(args: {
 
   let aiReply: string | null = null;
   let aiMessageId: string | null = null;
+
+  const { error: convoUpdateError } = await supabase
+    .from("conversations")
+    .update({
+      last_message: args.content,
+      last_message_time: now,
+      updated_at: now,
+    })
+    .eq("id", args.conversation_id);
+
+  if (convoUpdateError) {
+    console.error("[Support API] Conversation update error:", convoUpdateError);
+  }
 
   // Check if conversation has been handed over to human agent
   const { data: conversation } = await supabase
@@ -176,6 +217,12 @@ export async function sendCustomerMessage(args: {
               is_internal: false,
               source: "banking",
               channel: args.channel ?? "chat",
+              provider: args.provider ?? "twilio",
+              provider_message_id: null,
+              from_address: null,
+              to_address: null,
+              status: "sent",
+              metadata: null,
               created_at: new Date().toISOString(),
             })
             .select()
@@ -215,6 +262,12 @@ export async function sendAgentMessage(args: {
   content: string;
   is_internal?: boolean;
   channel?: string;
+  provider?: string;
+  provider_message_id?: string;
+  from_address?: string;
+  to_address?: string;
+  status?: "received" | "sent";
+  metadata?: Record<string, unknown> | null;
 }): Promise<DbMessage> {
   const endpoint = "POST /api/messages (Supabase: messages.insert - agent)";
   console.log(`[Support API] Calling: ${endpoint}`);
@@ -238,6 +291,12 @@ export async function sendAgentMessage(args: {
       is_internal: !!args.is_internal,
       source: "banking",
       channel: args.channel ?? "chat",
+      provider: args.provider ?? "twilio",
+      provider_message_id: args.provider_message_id ?? null,
+      from_address: args.from_address ?? null,
+      to_address: args.to_address ?? null,
+      status: args.status ?? "sent",
+      metadata: args.metadata ?? null,
       created_at: now,
     })
     .select()
@@ -273,6 +332,9 @@ export async function requestConversationHandover(args: {
     .from("conversations")
     .update({
       status: "escalated",
+      priority: "high",
+      escalation_risk: true,
+      handling_mode: "human",
       handover_required: true,
       updated_at: now,
     })
@@ -293,6 +355,12 @@ export async function requestConversationHandover(args: {
     is_internal: false,
     source: "banking",
     channel: args.channel ?? "chat",
+    provider: "app",
+    provider_message_id: null,
+    from_address: null,
+    to_address: null,
+    status: "sent",
+    metadata: null,
     created_at: now,
   });
 

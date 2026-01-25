@@ -69,7 +69,6 @@ export default function SupportPage() {
   const [newTicketPriority, setNewTicketPriority] = useState("medium")
   const [creating, setCreating] = useState(false)
   const [escalating, setEscalating] = useState(false)
-  const [pendingFirstMessage, setPendingFirstMessage] = useState<string | null>(null)
 
   const { conversations, refresh } = useCustomerConversations({ 
     customerId: customerId || "" 
@@ -185,15 +184,17 @@ export default function SupportPage() {
 
       setNewTicketDialog(false)
 
-      // send first message after conversation is selected
-      setPendingFirstMessage(firstMsg)
-
       setNewTicketSubject("")
       setNewTicketMessage("")
       setNewTicketPriority("medium")
 
       // refresh the list
       await refresh()
+
+      // send first message with a small delay to ensure hook is ready
+      setTimeout(() => {
+        send(firstMsg).catch((e) => console.error("Failed to send first ticket message", e))
+      }, 100)
     } catch (e) {
       console.error("Failed to create ticket", e)
     } finally {
@@ -220,12 +221,6 @@ export default function SupportPage() {
     }
   }
 
-  useEffect(() => {
-    if (!pendingFirstMessage || !selectedConversation) return
-    const messageToSend = pendingFirstMessage
-    setPendingFirstMessage(null)
-    send(messageToSend).catch((e) => console.error("Failed to send first ticket message", e))
-  }, [pendingFirstMessage, selectedConversation, send])
 
   const statusColors: Record<string, string> = {
     open: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",

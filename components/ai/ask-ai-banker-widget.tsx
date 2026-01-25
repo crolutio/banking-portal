@@ -2,23 +2,32 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { MessageSquare, Sparkles } from "lucide-react"
+import { MessageSquare, Sparkles, Bot, Phone, Mail, FileText } from "lucide-react"
 import { useFloatingChat } from "@/components/ai/floating-chat-context"
 import { AI_AGENT_THEMES } from "@/components/ai/ai-banker-chat-interface"
 import { AI_AGENT_PERSONAS, type AIAgentId } from "@/lib/ai/agents"
+
+interface QuickHelpCard {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  subtitle: string
+  onClick?: () => void
+}
 
 interface AskAIBankerWidgetProps {
   questions: string[]
   title?: string
   description?: string
   agentId?: AIAgentId
+  quickHelpCards?: QuickHelpCard[]
 }
 
 export function AskAIBankerWidget({
   questions,
   title,
   description,
-  agentId = "banker"
+  agentId = "banker",
+  quickHelpCards
 }: AskAIBankerWidgetProps) {
   const theme = AI_AGENT_THEMES[agentId] ?? AI_AGENT_THEMES.banker
   const persona = AI_AGENT_PERSONAS[agentId] ?? AI_AGENT_PERSONAS.banker
@@ -59,6 +68,30 @@ export function AskAIBankerWidget({
             </Button>
           ))}
         </div>
+
+        {quickHelpCards && quickHelpCards.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-border/50">
+            <div className="grid grid-cols-1 gap-2">
+              {quickHelpCards.map((card, index) => (
+                <Card
+                  key={index}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors border-none shadow-none"
+                  onClick={card.onClick}
+                >
+                  <CardContent className="p-3 flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <card.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{card.title}</p>
+                      <p className="text-xs text-muted-foreground">{card.subtitle}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

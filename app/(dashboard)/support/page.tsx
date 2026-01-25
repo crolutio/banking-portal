@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { useRole } from "@/lib/role-context"
 import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
+import { useFloatingChat } from "@/components/ai/floating-chat-context"
 import {
   Bar,
   BarChart,
@@ -57,6 +58,7 @@ const CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#8
 export default function SupportPage() {
   const { currentUser } = useRole()
   const customerId = currentUser?.id
+  const { openChatWithMessage } = useFloatingChat()
 
   
   const [selectedConversation, setSelectedConversation] = useState<DbConversation | null>(null)
@@ -441,6 +443,37 @@ export default function SupportPage() {
     "Help me with a banking issue",
   ]
 
+  // Quick help cards for support
+  const quickHelpCards = [
+    {
+      icon: Bot,
+      title: "AI Assistant",
+      subtitle: "Get instant answers",
+      onClick: () => openChatWithMessage("I need help with a banking issue", "banker")
+    },
+    {
+      icon: Phone,
+      title: "Call Us",
+      subtitle: "800-BANK-FUTURE",
+      onClick: () => window.open("tel:800-BANK-FUTURE")
+    },
+    {
+      icon: Mail,
+      title: "Email",
+      subtitle: "support@bankfuture.com",
+      onClick: () => window.open("mailto:support@bankfuture.com")
+    },
+    {
+      icon: FileText,
+      title: "FAQs",
+      subtitle: "Browse help articles",
+      onClick: () => {
+        // Could navigate to a FAQ page or open a modal
+        console.log("Navigate to FAQs")
+      }
+    },
+  ]
+
   return (
     <div className="flex flex-col h-full overflow-hidden space-y-3 p-4 pt-2">
       <div className="flex items-center justify-between">
@@ -506,53 +539,6 @@ export default function SupportPage() {
         </Dialog>
       </div>
 
-      {/* Quick Help Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors py-2 gap-2">
-          <CardContent className="p-2 flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-              <Bot className="h-3 w-3 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">AI Assistant</p>
-              <p className="text-[11px] text-muted-foreground">Get instant answers</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors py-2 gap-2">
-          <CardContent className="p-2 flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-              <Phone className="h-3 w-3 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Call Us</p>
-              <p className="text-[11px] text-muted-foreground">800-BANK-FUTURE</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors py-2 gap-2">
-          <CardContent className="p-2 flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-              <Mail className="h-3 w-3 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Email</p>
-              <p className="text-[11px] text-muted-foreground">support@bankfuture.com</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors py-2 gap-2">
-          <CardContent className="p-2 flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-              <FileText className="h-3 w-3 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">FAQs</p>
-              <p className="text-[11px] text-muted-foreground">Browse help articles</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Support Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 flex-1 min-h-0">
@@ -752,7 +738,11 @@ export default function SupportPage() {
         {/* Sidebar with AI widget - 1 column */}
         <div className="lg:col-span-1">
           <div className="sticky top-6">
-            <AskAIBankerWidget questions={aiQuestions} description="Get quick answers to common support questions" />
+            <AskAIBankerWidget
+              questions={aiQuestions}
+              description="Get quick answers to common support questions"
+              quickHelpCards={quickHelpCards}
+            />
           </div>
         </div>
       </div>

@@ -23,8 +23,12 @@ import {
   MessageSquare,
   Maximize,
   X,
-  Square
+  Square,
+  Mic,
+  MicOff,
+  Phone
 } from "lucide-react"
+import { useRetellVoice } from "@/lib/hooks/useRetellVoice"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis, PieChart, Pie, Cell } from "recharts"
 import Image from "next/image"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -560,6 +564,57 @@ export function FloatingChatBubble() {
     },
   })
 
+  // Retell Voice Integration
+  const lastUserMessageRef = useRef<string>("")
+  const lastAgentMessageRef = useRef<string>("")
+  
+  const {
+    isConnected: isVoiceConnected,
+    isConnecting: isVoiceConnecting,
+    isSpeaking,
+    toggleCall,
+    endCall,
+  } = useRetellVoice({
+    dynamicVariables: {
+      customer_name: currentUser?.name || "Customer",
+      user_id: currentUser?.id || "",
+    },
+    metadata: {
+      userId: currentUser?.id,
+      agentId,
+      currentPage: pathname,
+    },
+    onMessage: (message) => {
+      // Add voice transcripts to the chat as messages
+      if (message.role === "user") {
+        // Only add if content changed (Retell sends incremental updates)
+        if (message.content !== lastUserMessageRef.current && message.content.trim()) {
+          lastUserMessageRef.current = message.content
+          // We'll append the final user message when agent starts responding
+        }
+      } else if (message.role === "agent") {
+        // For agent messages, we want to show them in real-time
+        // But we need to handle incremental updates properly
+        if (message.content !== lastAgentMessageRef.current && message.content.trim()) {
+          // If we have a pending user message, append it first
+          if (lastUserMessageRef.current && lastAgentMessageRef.current === "") {
+            append({ role: "user", content: lastUserMessageRef.current })
+          }
+          lastAgentMessageRef.current = message.content
+        }
+      }
+    },
+    onCallEnd: () => {
+      // When call ends, add the final agent response if not already added
+      if (lastAgentMessageRef.current) {
+        append({ role: "assistant", content: lastAgentMessageRef.current })
+      }
+      // Reset refs
+      lastUserMessageRef.current = ""
+      lastAgentMessageRef.current = ""
+    },
+  })
+
   // Auto-send initial message if provided and it's different from the last one
   useEffect(() => {
     if (initialMessage && initialMessage !== lastSentMessageRef.current) {
@@ -857,19 +912,69 @@ export function FloatingChatBubble() {
 
       {/* Input Area */}
       <div className="p-4 border-t bg-background">
+        {/* Voice Call Status Banner */}
+        {isVoiceConnected && (
+          <div className="mb-3 flex items-center justify-between bg-primary/10 rounded-lg px-3 py-2">
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "w-2.5 h-2.5 rounded-full",
+                isSpeaking ? "bg-yellow-500 animate-pulse" : "bg-green-500"
+              )} />
+              <span className="text-sm font-medium">
+                {isSpeaking ? "AI is speaking..." : "Listening to you..."}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={endCall}
+              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+            >
+              <Phone className="h-4 w-4 mr-1" />
+              End Call
+            </Button>
+          </div>
+        )}
+        
         <form
           onSubmit={handleSubmit}
-          className="flex gap-3 items-center"
+          className="flex gap-2 items-center"
         >
           <Input
-            placeholder="Type your message..."
+            placeholder={isVoiceConnected ? "Voice call active..." : "Type your message..."}
             value={input || ""}
             onChange={handleInputChange}
             className="flex-1"
+            disabled={isVoiceConnected}
           />
+          
+          {/* Voice Button */}
+          <Button
+            type="button"
+            variant={isVoiceConnected ? "default" : "outline"}
+            size="icon"
+            className={cn(
+              "shrink-0 transition-all duration-200",
+              isVoiceConnected && "bg-red-500 hover:bg-red-600",
+              isVoiceConnecting && "animate-pulse"
+            )}
+            onClick={toggleCall}
+            disabled={isVoiceConnecting || isLoading}
+            title={isVoiceConnected ? "End voice call" : "Start voice call"}
+          >
+            {isVoiceConnecting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isVoiceConnected ? (
+              <MicOff className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </Button>
+          
+          {/* Send Button */}
           <Button 
             type={isLoading ? "button" : "submit"}
-            disabled={!input?.trim() && !isLoading} 
+            disabled={(!input?.trim() && !isLoading) || isVoiceConnected} 
             className="bg-primary hover:bg-primary/90 transition-all duration-200 hover:scale-105 active:scale-95"
             onClick={isLoading ? (e) => {
               e.preventDefault()

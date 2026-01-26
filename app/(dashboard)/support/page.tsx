@@ -46,7 +46,9 @@ import {
   FileText,
   Headphones,
   UserPlus,
+  Mic,
 } from "lucide-react"
+import { RetellChatVoiceButton } from "@/components/ai/retell-chat-voice-button"
 import type { DbConversation, DbMessage } from "@/lib/types"
 import { useCustomerConversations } from "@/lib/hooks/useCustomerConversations"
 import { useConversationMessages } from "@/lib/hooks/useConversationMessages"
@@ -711,6 +713,27 @@ export default function SupportPage() {
                           }
                         }}
                       />
+                      {/* Retell Voice Button - sends transcripts to chat */}
+                      <RetellChatVoiceButton
+                        onUserMessage={(text) => {
+                          // Send user's voice message to the conversation
+                          send(text).catch(console.error)
+                        }}
+                        onAgentMessage={(text) => {
+                          // Agent responses are shown in real-time via the voice
+                          // Optionally log or track them
+                          console.log("[Voice Agent]", text)
+                        }}
+                        metadata={{
+                          conversationId: selectedConversation?.id,
+                          customerId: customerId,
+                          subject: selectedConversation?.subject,
+                        }}
+                        dynamicVariables={{
+                          customer_name: currentUser?.name || "Customer",
+                          ticket_subject: selectedConversation?.subject || "Support request",
+                        }}
+                      />
                       <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
                         <Send className="h-4 w-4" />
                       </Button>
@@ -733,7 +756,7 @@ export default function SupportPage() {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-8 text-center">
-                      AI will try to help first. Click "Escalate" to speak with a human agent.
+                      AI will try to help first. Click <Mic className="h-3 w-3 inline" /> for voice, or "Escalate" to speak with a human.
                     </p>
                   </div>
                 </>

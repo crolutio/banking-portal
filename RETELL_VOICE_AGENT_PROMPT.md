@@ -35,8 +35,9 @@ Before asking the user for ID, always resolve the current user using the custom 
 - **Output**: `customer_id` (and `full_name` if available)
 
 Rules:
+- Always call `resolve_current_user` before answering any balance, transaction, card, loan, or account question.
 - If the function returns `customer_id`, proceed with data access and do NOT ask the user for ID.
-- Only ask for identity if both `profile_id` and `customer_id` are missing and the function cannot resolve them.
+- Only ask for identity if the function returns an error or empty `customer_id`.
 
 ## How to Handle Requests
 

@@ -554,7 +554,7 @@ export function FloatingChatBubble() {
   const lastSentMessageRef = useRef<string>("")
   const previousStateRef = useRef<string>(chatState)
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, append, stop } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, append, stop, setMessages } = useChat({
     api: "/api/chat",
     id: `floating-chat-${agentId}`, // Stable ID for persistence across pages
     body: {
@@ -565,13 +565,20 @@ export function FloatingChatBubble() {
   })
 
   // Retell Voice Integration
-  const lastUserMessageRef = useRef<string>("")
-  const lastAgentMessageRef = useRef<string>("")
+  const messagesRef = useRef(messages)
+  const voiceStartIndexRef = useRef<number | null>(null)
+  const voiceCallIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
   
   const {
     isConnected: isVoiceConnected,
     isConnecting: isVoiceConnecting,
     isSpeaking,
+    transcript,
+    callId,
     toggleCall,
     endCall,
   } = useRetellVoice({
@@ -584,36 +591,34 @@ export function FloatingChatBubble() {
       agentId,
       currentPage: pathname,
     },
-    onMessage: (message) => {
-      // Add voice transcripts to the chat as messages
-      if (message.role === "user") {
-        // Only add if content changed (Retell sends incremental updates)
-        if (message.content !== lastUserMessageRef.current && message.content.trim()) {
-          lastUserMessageRef.current = message.content
-          // We'll append the final user message when agent starts responding
-        }
-      } else if (message.role === "agent") {
-        // For agent messages, we want to show them in real-time
-        // But we need to handle incremental updates properly
-        if (message.content !== lastAgentMessageRef.current && message.content.trim()) {
-          // If we have a pending user message, append it first
-          if (lastUserMessageRef.current && lastAgentMessageRef.current === "") {
-            append({ role: "user", content: lastUserMessageRef.current })
-          }
-          lastAgentMessageRef.current = message.content
-        }
+    onCallStart: (newCallId) => {
+      voiceStartIndexRef.current = messagesRef.current.length
+      voiceCallIdRef.current = newCallId
+      if (isLoading) {
+        stop()
       }
     },
     onCallEnd: () => {
-      // When call ends, add the final agent response if not already added
-      if (lastAgentMessageRef.current) {
-        append({ role: "assistant", content: lastAgentMessageRef.current })
-      }
-      // Reset refs
-      lastUserMessageRef.current = ""
-      lastAgentMessageRef.current = ""
+      voiceStartIndexRef.current = null
+      voiceCallIdRef.current = null
     },
   })
+
+  useEffect(() => {
+    if (!isVoiceConnected) return
+
+    const baseIndex = voiceStartIndexRef.current ?? messagesRef.current.length
+    const baseMessages = messagesRef.current.slice(0, baseIndex)
+    const voiceIdBase = voiceCallIdRef.current ?? callId ?? "active"
+
+    const voiceMessages = transcript.map((msg, index) => ({
+      id: `retell-${voiceIdBase}-${index}`,
+      role: msg.role === "user" ? "user" : "assistant",
+      content: msg.content,
+    }))
+
+    setMessages([...baseMessages, ...voiceMessages])
+  }, [transcript, isVoiceConnected, setMessages, callId])
 
   // Auto-send initial message if provided and it's different from the last one
   useEffect(() => {

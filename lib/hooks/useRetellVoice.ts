@@ -100,6 +100,8 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
 
   const retellClientRef = useRef<RetellWebClient | null>(null)
   const lastProcessedIndexRef = useRef<number>(0)
+  const transcriptRef = useRef<TranscriptMessage[]>([])
+  const lastTranscriptRef = useRef<Array<{ role: string; content: string }>>([])
 
   // Initialize Retell client on mount
   useEffect(() => {
@@ -112,12 +114,14 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
       setIsConnecting(false)
       setError(null)
       setTranscript([])
+      transcriptRef.current = []
+      lastTranscriptRef.current = []
       lastProcessedIndexRef.current = 0
     })
 
     client.on("call_ended", () => {
       console.log("[Retell Hook] Call ended")
-      const finalTranscript = [...transcript]
+      const finalTranscript = [...transcriptRef.current]
       setIsConnected(false)
       setIsConnecting(false)
       setIsSpeaking(false)
@@ -134,21 +138,34 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
 
     client.on("update", (update: { transcript?: Array<{ role: string; content: string }> }) => {
       if (update.transcript && update.transcript.length > 0) {
-        const newMessages: TranscriptMessage[] = update.transcript.map((msg) => ({
-          role: msg.role as "agent" | "user",
-          content: msg.content,
-          timestamp: Date.now(),
-        }))
+        const previous = lastTranscriptRef.current
+        const newMessages: TranscriptMessage[] = update.transcript.map((msg, index) => {
+          const role = msg.role as "agent" | "user"
+          const previousMessage = transcriptRef.current[index]
+          const sameContent =
+            previousMessage?.content === msg.content && previousMessage?.role === role
+
+          return {
+            role,
+            content: msg.content,
+            timestamp: sameContent ? previousMessage.timestamp : Date.now(),
+          }
+        })
 
         setTranscript(newMessages)
+        transcriptRef.current = newMessages
 
-        // Notify about new messages only
-        if (newMessages.length > lastProcessedIndexRef.current) {
-          for (let i = lastProcessedIndexRef.current; i < newMessages.length; i++) {
-            onMessage?.(newMessages[i])
+        // Notify about new or updated messages
+        for (let i = 0; i < newMessages.length; i++) {
+          const previousMessage = previous[i]
+          const nextMessage = newMessages[i]
+          if (!previousMessage || previousMessage.content !== nextMessage.content) {
+            onMessage?.(nextMessage)
           }
-          lastProcessedIndexRef.current = newMessages.length
         }
+
+        lastProcessedIndexRef.current = newMessages.length
+        lastTranscriptRef.current = update.transcript
       }
     })
 
@@ -168,7 +185,7 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
         // Ignore cleanup errors
       }
     }
-  }, [onCallEnd, onMessage, onError, transcript])
+  }, [onCallEnd, onMessage, onError])
 
   const startCall = useCallback(async () => {
     if (!retellClientRef.current || isConnecting || isConnected) return
@@ -214,6 +231,9 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
 
   const endCall = useCallback(() => {
     retellClientRef.current?.stopCall()
+    setIsConnected(false)
+    setIsConnecting(false)
+    setIsSpeaking(false)
     setCallId(null)
   }, [])
 

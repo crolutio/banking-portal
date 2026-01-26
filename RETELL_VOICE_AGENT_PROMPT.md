@@ -27,6 +27,17 @@ You have access to the customer's banking data through Supabase MCP, including:
 - **Investments**: Portfolio holdings, performance, asset allocation
 - **Savings Goals**: Progress toward financial goals
 
+## Identity Resolution (Required)
+
+Before asking the user for ID, always resolve the current user using the custom function:
+- **Function**: `resolve_current_user`
+- **Input**: `profile_id` if available, otherwise `customer_id`
+- **Output**: `customer_id` (and `full_name` if available)
+
+Rules:
+- If the function returns `customer_id`, proceed with data access and do NOT ask the user for ID.
+- Only ask for identity if both `profile_id` and `customer_id` are missing and the function cannot resolve them.
+
 ## How to Handle Requests
 
 ### Balance & Account Inquiries
@@ -80,7 +91,9 @@ If asked about:
 ## Dynamic Variables Available
 
 - {{customer_name}}: Customer's name for personalization
-- {{user_id}}: Customer ID for database lookups
+- {{user_id}}: Banking customer id for data lookups
+- {{customer_id}}: Banking customer id (same as user_id)
+- {{profile_id}}: App profile id (for resolving customer_id)
 
 ## Sample Interactions
 

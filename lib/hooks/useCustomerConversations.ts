@@ -7,13 +7,14 @@ import type { DbConversation } from "../types";
 
 export function useCustomerConversations(params: {
   customerId: string;
+  showAll?: boolean;
 }) {
-  const { customerId } = params;
+  const { customerId, showAll = false } = params;
   const [conversations, setConversations] = useState<DbConversation[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function refresh() {
-    if (!customerId) {
+    if (!customerId && !showAll) {
       setConversations([]);
       setLoading(false);
       return;
@@ -22,12 +23,15 @@ export function useCustomerConversations(params: {
     setLoading(true);
     try {
       const supabase = createCallCenterClient();
-      const { data, error } = await supabase
+      const query = supabase
         .from("conversations")
         .select("*")
-        .eq("customer_id", customerId)
         .eq("source", "banking")
         .order("created_at", { ascending: false });
+
+      const { data, error } = showAll
+        ? await query
+        : await query.eq("customer_id", customerId);
 
       if (error) {
         console.error("[useCustomerConversations] fetch error", error);
@@ -37,10 +41,20 @@ export function useCustomerConversations(params: {
           hint: error.hint,
           code: error.code,
           customerId,
+          showAll,
         });
         setConversations([]);
         setLoading(false);
         return;
+      }
+
+      if (!showAll && (data?.length ?? 0) === 0) {
+        const { data: fallback, error: fallbackError } = await query;
+        if (!fallbackError) {
+          setConversations((fallback ?? []) as DbConversation[]);
+          return;
+        }
+        console.error("[useCustomerConversations] fallback error", fallbackError);
       }
 
       setConversations((data ?? []) as DbConversation[]);
@@ -53,20 +67,24 @@ export function useCustomerConversations(params: {
   }
 
   useEffect(() => {
-    if (!customerId) return;
+    if (!customerId && !showAll) return;
     refresh().catch(console.error);
 
     // Realtime subscription (best effort)
     const supabase = createCallCenterClient();
+    const filter = showAll
+      ? "source=eq.banking"
+      : `customer_id=eq.${customerId}`;
+
     const channel = supabase
-      .channel(`cust:${customerId}:conversations`)
+      .channel(showAll ? "conversations:banking" : `cust:${customerId}:conversations`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "conversations",
-          filter: `customer_id=eq.${customerId}`,
+          filter,
         },
         () => {
           // simplest: re-fetch to keep list correct
@@ -78,7 +96,7 @@ export function useCustomerConversations(params: {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [customerId]);
+  }, [customerId, showAll]);
 
   return { conversations, loading, refresh };
 }

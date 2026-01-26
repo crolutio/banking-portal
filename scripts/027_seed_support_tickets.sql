@@ -1,47 +1,68 @@
 -- Seed support tickets
 -- Fixed sender_type values: 'customer' → 'user' to match check constraint
 
-INSERT INTO support_tickets (id, user_id, subject, status, priority, assigned_to) VALUES
-('aaaa0001-0001-0001-0001-000000000001', '11111111-1111-1111-1111-111111111111', 'Unable to add new beneficiary', 'resolved', 'medium', '66666666-6666-6666-6666-666666666666'),
-('aaaa0002-0001-0001-0001-000000000002', '33333333-3333-3333-3333-333333333333', 'Card delivery tracking', 'open', 'low', NULL),
-('aaaa0003-0001-0001-0001-000000000003', '22222222-2222-2222-2222-222222222222', 'Business account statement request', 'in_progress', 'medium', '77777777-7777-7777-7777-777777777777'),
-('aaaa0004-0001-0001-0001-000000000004', '55555555-5555-5555-5555-555555555555', 'Credit card limit increase', 'open', 'high', '66666666-6666-6666-6666-666666666666'),
-('aaaa0005-0001-0001-0001-000000000005', '44444444-4444-4444-4444-444444444444', 'Wire transfer fee inquiry', 'resolved', 'low', '66666666-6666-6666-6666-666666666666')
+DELETE FROM support_messages;
+DELETE FROM support_tickets;
 
-ON CONFLICT (id) DO UPDATE SET
-  status = EXCLUDED.status;
+INSERT INTO support_tickets (id, user_id, subject, status, priority, assigned_to, resolved_at, created_at, updated_at) VALUES
+('aaaa1001-0001-0001-0001-000000000001', '4e140685-8f38-49ff-aae0-d6109c46873d', 'International transfer pending review', 'open', 'high', '51880b1d-3935-49dd-bac6-9469d33d3ee3', NULL, '2024-12-20T09:10:00Z', '2024-12-20T10:30:00Z'),
+('aaaa1002-0001-0001-0001-000000000002', '33333333-3333-3333-3333-333333333333', 'Card replacement fee waiver request', 'resolved', 'low', '51880b1d-3935-49dd-bac6-9469d33d3ee3', '2024-12-18T15:00:00Z', '2024-12-18T13:20:00Z', '2024-12-18T15:05:00Z'),
+('aaaa1003-0001-0001-0001-000000000003', '22222222-2222-2222-2222-222222222222', 'Business account statement for visa', 'in_progress', 'medium', '77777777-7777-7777-7777-777777777777', NULL, '2024-12-17T08:40:00Z', '2024-12-17T12:15:00Z'),
+('aaaa1004-0001-0001-0001-000000000004', 'e9c42918-fad4-422f-b4ba-24bb5943bb67', 'Chargeback on card transaction', 'open', 'high', '51880b1d-3935-49dd-bac6-9469d33d3ee3', NULL, '2024-12-16T16:05:00Z', '2024-12-16T16:45:00Z'),
+('aaaa1005-0001-0001-0001-000000000005', '44444444-4444-4444-4444-444444444444', 'Mobile app login verification loop', 'resolved', 'medium', '77777777-7777-7777-7777-777777777777', '2024-12-14T11:20:00Z', '2024-12-14T09:30:00Z', '2024-12-14T11:25:00Z'),
+('aaaa1006-0001-0001-0001-000000000006', '4e140685-8f38-49ff-aae0-d6109c46873d', 'Recurring transfer limit clarification', 'open', 'low', NULL, NULL, '2024-12-13T10:05:00Z', '2024-12-13T10:10:00Z');
 
 -- Seed support messages - Fixed sender_type: 'customer' → 'user'
-INSERT INTO support_messages (id, ticket_id, sender_id, sender_type, content, citations) VALUES
+INSERT INTO support_messages (id, ticket_id, sender_id, sender_type, content, citations, created_at) VALUES
 -- Ticket 1 conversation
-('abcd0001-0001-0001-0001-000000000001', 'aaaa0001-0001-0001-0001-000000000001', '11111111-1111-1111-1111-111111111111', 'user', 
-  'Hi, I''m trying to add a new beneficiary for international transfer but the system keeps showing an error. Can you help?', NULL),
-('abcd0001-0002-0001-0001-000000000002', 'aaaa0001-0001-0001-0001-000000000001', NULL, 'ai', 
-  'I understand you''re having trouble adding a beneficiary. This usually happens when the IBAN format is incorrect or the beneficiary bank details are incomplete. Could you please verify: 1) The IBAN is exactly as provided by the beneficiary, 2) The bank name and SWIFT code are correct.',
-  '[{"source": "International Transfer Guidelines", "type": "policy"}]'),
-('abcd0001-0003-0001-0001-000000000003', 'aaaa0001-0001-0001-0001-000000000001', '11111111-1111-1111-1111-111111111111', 'user', 
-  'Oh I see! The IBAN was missing a digit. It works now. Thank you!', NULL),
-('abcd0001-0004-0001-0001-000000000004', 'aaaa0001-0001-0001-0001-000000000001', '66666666-6666-6666-6666-666666666666', 'agent', 
-  'Great to hear it''s resolved! If you have any other questions, feel free to reach out.', NULL),
+('abcd1001-0001-0001-0001-000000000001', 'aaaa1001-0001-0001-0001-000000000001', '4e140685-8f38-49ff-aae0-d6109c46873d', 'user',
+  'My international transfer is pending for 3 days. It says compliance review. What''s happening?', NULL, '2024-12-20T09:10:00Z'),
+('abcd1001-0002-0001-0001-000000000002', 'aaaa1001-0001-0001-0001-000000000001', NULL, 'ai',
+  'I can help with that. Transfers over AED 50,000 are reviewed for sanctions screening. I''ve flagged this to compliance for expedited review.',
+  '[{"source": "International Transfer Guidelines", "type": "policy"}]', '2024-12-20T09:12:00Z'),
+('abcd1001-0003-0001-0001-000000000003', 'aaaa1001-0001-0001-0001-000000000001', '51880b1d-3935-49dd-bac6-9469d33d3ee3', 'agent',
+  'We''re reviewing the beneficiary details now. Expected update within 4 business hours.', NULL, '2024-12-20T10:30:00Z'),
 
 -- Ticket 2 conversation
-('abcd0002-0001-0001-0001-000000000001', 'aaaa0002-0001-0001-0001-000000000002', '33333333-3333-3333-3333-333333333333', 'user', 
-  'I ordered a new debit card 5 days ago but haven''t received any tracking information. When will it arrive?', NULL),
-('abcd0002-0002-0001-0001-000000000002', 'aaaa0002-0001-0001-0001-000000000002', NULL, 'ai', 
-  'Card delivery typically takes 5-7 business days within the UAE. Your card was dispatched on November 21st and is currently with Aramex for delivery. Expected delivery is November 26-27. You can track it using reference: ARX-847362.',
-  '[{"source": "Card Delivery Policy", "type": "policy"}, {"source": "Order #CD-2024-847", "type": "account"}]'),
+('abcd1002-0001-0001-0001-000000000001', 'aaaa1002-0001-0001-0001-000000000002', '33333333-3333-3333-3333-333333333333', 'user',
+  'My card was damaged in the ATM. Can the replacement fee be waived?', NULL, '2024-12-18T13:20:00Z'),
+('abcd1002-0002-0001-0001-000000000002', 'aaaa1002-0001-0001-0001-000000000002', NULL, 'ai',
+  'I can request a fee waiver based on the ATM incident. Please confirm the ATM location and time.',
+  '[{"source": "Card Replacement Policy", "type": "policy"}]', '2024-12-18T13:22:00Z'),
+('abcd1002-0003-0001-0001-000000000003', 'aaaa1002-0001-0001-0001-000000000002', '33333333-3333-3333-3333-333333333333', 'user',
+  'Dubai Marina Mall ATM, yesterday around 7pm.', NULL, '2024-12-18T13:25:00Z'),
+('abcd1002-0004-0001-0001-000000000004', 'aaaa1002-0001-0001-0001-000000000002', '51880b1d-3935-49dd-bac6-9469d33d3ee3', 'agent',
+  'Thanks. We''ve waived the fee and ordered the replacement. You''ll receive it in 5-7 business days.', NULL, '2024-12-18T15:05:00Z'),
 
 -- Ticket 3 conversation
-('abcd0003-0001-0001-0001-000000000001', 'aaaa0003-0001-0001-0001-000000000003', '22222222-2222-2222-2222-222222222222', 'user', 
-  'I need official statements for my business account for the last 6 months for visa processing. Can you email them?', NULL),
-('abcd0003-0002-0001-0001-000000000002', 'aaaa0003-0001-0001-0001-000000000003', '77777777-7777-7777-7777-777777777777', 'agent', 
-  'Hi Mohammed, I''ll prepare the official bank statements for your business account. For visa purposes, these will include the bank seal and authorized signature. I''ll email them to your registered email within 24 hours.', NULL),
+('abcd1003-0001-0001-0001-000000000001', 'aaaa1003-0001-0001-0001-000000000003', '22222222-2222-2222-2222-222222222222', 'user',
+  'Need official statements for my business account for visa processing. Last 6 months.', NULL, '2024-12-17T08:40:00Z'),
+('abcd1003-0002-0001-0001-000000000002', 'aaaa1003-0001-0001-0001-000000000003', '77777777-7777-7777-7777-777777777777', 'agent',
+  'Got it. We''ll prepare stamped statements and email them within 24 hours.', NULL, '2024-12-17T12:15:00Z'),
 
 -- Ticket 4 conversation
-('abcd0004-0001-0001-0001-000000000001', 'aaaa0004-0001-0001-0001-000000000004', '55555555-5555-5555-5555-555555555555', 'user', 
-  'I would like to request a credit limit increase on my Visa card. Current limit is AED 30,000 and I need AED 50,000.', NULL),
-('abcd0004-0002-0001-0001-000000000002', 'aaaa0004-0001-0001-0001-000000000004', NULL, 'ai', 
-  'I can help you with a credit limit increase request. Based on your account history, you may be eligible for an increase. To process this request, we''ll need: 1) Recent salary certificate, 2) Bank statements for last 3 months. Would you like to upload these documents?',
-  '[{"source": "Credit Limit Policy", "type": "policy"}, {"source": "Account Analysis", "type": "account"}]')
+('abcd1004-0001-0001-0001-000000000001', 'aaaa1004-0001-0001-0001-000000000004', 'e9c42918-fad4-422f-b4ba-24bb5943bb67', 'user',
+  'I have a card transaction for AED 2,400 that I don''t recognize. Can you dispute it?', NULL, '2024-12-16T16:05:00Z'),
+('abcd1004-0002-0001-0001-000000000002', 'aaaa1004-0001-0001-0001-000000000004', NULL, 'ai',
+  'I can help file a dispute. Please confirm the merchant name and date so we can proceed.',
+  '[{"source": "Transaction Dispute Policy", "type": "policy"}]', '2024-12-16T16:10:00Z'),
+('abcd1004-0003-0001-0001-000000000003', 'aaaa1004-0001-0001-0001-000000000004', '51880b1d-3935-49dd-bac6-9469d33d3ee3', 'agent',
+  'We''ve opened a dispute case and issued a provisional credit. We''ll update you within 10 business days.', NULL, '2024-12-16T16:45:00Z'),
+
+-- Ticket 5 conversation
+('abcd1005-0001-0001-0001-000000000001', 'aaaa1005-0001-0001-0001-000000000005', '44444444-4444-4444-4444-444444444444', 'user',
+  'I keep getting the verification code, but the app loops back to login.', NULL, '2024-12-14T09:30:00Z'),
+('abcd1005-0002-0001-0001-000000000002', 'aaaa1005-0001-0001-0001-000000000005', NULL, 'ai',
+  'Thanks for reporting this. Clearing cached data usually resolves the verification loop. I can also reset your session token.',
+  '[{"source": "Mobile App Support Playbook", "type": "policy"}]', '2024-12-14T09:35:00Z'),
+('abcd1005-0003-0001-0001-000000000003', 'aaaa1005-0001-0001-0001-000000000005', '77777777-7777-7777-7777-777777777777', 'agent',
+  'We reset the session token and confirmed login works. Let us know if it recurs.', NULL, '2024-12-14T11:25:00Z'),
+
+-- Ticket 6 conversation
+('abcd1006-0001-0001-0001-000000000001', 'aaaa1006-0001-0001-0001-000000000006', '4e140685-8f38-49ff-aae0-d6109c46873d', 'user',
+  'Is there a daily cap for recurring transfers? I want to schedule AED 8,000 monthly.', NULL, '2024-12-13T10:05:00Z'),
+('abcd1006-0002-0001-0001-000000000002', 'aaaa1006-0001-0001-0001-000000000006', NULL, 'ai',
+  'Recurring transfers are capped at AED 10,000 per day for retail accounts. Your AED 8,000 schedule is within the limit.',
+  '[{"source": "Transfer Limits Policy", "type": "policy"}]', '2024-12-13T10:10:00Z')
 
 ON CONFLICT (id) DO NOTHING;

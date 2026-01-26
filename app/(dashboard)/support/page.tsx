@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { useRole } from "@/lib/role-context"
+import { isCustomer, useRole } from "@/lib/role-context"
 import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 import { useFloatingChat } from "@/components/ai/floating-chat-context"
 import {
@@ -56,7 +56,7 @@ const CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#8
 
 
 export default function SupportPage() {
-  const { currentUser } = useRole()
+  const { currentUser, currentRole } = useRole()
   const customerId = currentUser?.id
   const { openChatWithMessage } = useFloatingChat()
 
@@ -72,8 +72,9 @@ export default function SupportPage() {
   const [pendingFirstMessage, setPendingFirstMessage] = useState<string | null>(null)
   const [pendingConversationId, setPendingConversationId] = useState<string | null>(null)
 
-  const { conversations, refresh } = useCustomerConversations({ 
-    customerId: customerId || "" 
+  const { conversations, refresh } = useCustomerConversations({
+    customerId: customerId || "",
+    showAll: !isCustomer(currentRole),
   })
 
   const { messages, send, waitingForReply } = useConversationMessages({

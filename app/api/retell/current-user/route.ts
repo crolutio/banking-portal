@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_BANKING_SUPABASE_URL
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_BANKING_SUPABASE_ANON_KEY
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_BANKING_SUPABASE_PUBLISHABLE_DEFAULT_KEY
 
 // Helper to safely get a string value (handles null, undefined, empty)
 function getString(value: unknown): string {

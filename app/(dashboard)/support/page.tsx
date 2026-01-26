@@ -249,6 +249,12 @@ export default function SupportPage() {
     high: "text-red-600",
   }
 
+  const formatStatusLabel = (status: string) => {
+    return status
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+  }
+
   const renderInlineMarkdown = (text: string) => {
     const parts = text.split(/(\*\*.*?\*\*|`.*?`|\[.*?\]\(.*?\)|\n)/g)
     return parts.map((part, idx) => {
@@ -573,7 +579,7 @@ export default function SupportPage() {
                         <div className="flex items-start justify-between gap-2">
                           <p className="font-medium text-sm line-clamp-1">{conv.subject ?? "(no subject)"}</p>
                           <Badge variant="outline" className={statusColors[conv.status]}>
-                            {conv.status.replace("_", " ")}
+                            {formatStatusLabel(conv.status)}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
@@ -602,7 +608,7 @@ export default function SupportPage() {
                         </CardDescription>
                       </div>
                       <Badge variant="outline" className={statusColors[selectedConversation.status]}>
-                        {selectedConversation.status.replace("_", " ")}
+                        {formatStatusLabel(selectedConversation.status)}
                       </Badge>
                     </div>
                   </CardHeader>

@@ -19,6 +19,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import {
@@ -143,7 +150,14 @@ function ThemeToggle() {
 function NotificationBell() {
   const pathname = usePathname()
   const [reviewed, setReviewed] = useState(false)
-  const notifications: Array<{ id: string; title: string; summary: string; detail: string }> = []
+  const [open, setOpen] = useState(false)
+  const notifications: Array<{
+    id: string
+    title: string
+    summary: string
+    detail?: string
+    requiresReview: boolean
+  }> = []
 
   if (pathname === "/accounts") {
     notifications.push({
@@ -152,6 +166,16 @@ function NotificationBell() {
       summary: "Upcoming payment would have caused an overdraft.",
       detail:
         "A monthly payment would have caused an overdraft. I moved AED 1,500 from savings to cover it and will return the funds automatically after your next salary credit—no fees, no action needed.",
+      requiresReview: true,
+    })
+  }
+
+  if (pathname === "/investments") {
+    notifications.push({
+      id: "market-shock",
+      title: "Market shock protection activated",
+      summary: "Market shock protection activated.",
+      requiresReview: false,
     })
   }
 
@@ -159,13 +183,15 @@ function NotificationBell() {
     return null
   }
 
+  const hasUnread = notifications.some((notification) => notification.requiresReview && !reviewed)
+
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-9 w-9">
           <Bell className="h-4 w-4" />
           <span className="sr-only">Notifications</span>
-          {!reviewed && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />}
+          {hasUnread && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96">
@@ -175,22 +201,40 @@ function NotificationBell() {
             <div key={notification.id} className="rounded-lg border border-border/70 p-3">
               <p className="text-sm font-medium text-foreground">{notification.title}</p>
               <p className="text-xs text-muted-foreground mt-1">{notification.summary}</p>
-              <div className="mt-3 flex items-center justify-between gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setReviewed(true)}
-                >
-                  Review
-                </Button>
-                {reviewed && (
-                  <span className="text-xs text-emerald-600">Reviewed</span>
-                )}
-              </div>
-              {reviewed && (
-                <div className="mt-3 rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-                  {notification.detail}
-                </div>
+              {notification.requiresReview && (
+                <>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setOpen(true)}
+                    >
+                      Review
+                    </Button>
+                    {reviewed && (
+                      <span className="text-xs text-emerald-600">Reviewed</span>
+                    )}
+                  </div>
+                  <Dialog
+                    open={open}
+                    onOpenChange={(nextOpen) => {
+                      setOpen(nextOpen)
+                      if (!nextOpen) {
+                        setReviewed(true)
+                      }
+                    }}
+                  >
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>{notification.title}</DialogTitle>
+                        <DialogDescription>{notification.summary}</DialogDescription>
+                      </DialogHeader>
+                      <div className="rounded-md bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
+                        {notification.detail}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </>
               )}
             </div>
           ))}

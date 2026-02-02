@@ -545,6 +545,22 @@ const suggestedPrompts = [
   "Review suspicious transactions",
 ]
 
+const MAX_VOICE_HISTORY_MESSAGES = 12
+const MAX_VOICE_HISTORY_CHARS = 3000
+
+function formatVoiceConversationHistory(messages: Message[]) {
+  const relevant = messages.filter((message) => message.role === "user" || message.role === "assistant")
+  const tail = relevant.slice(-MAX_VOICE_HISTORY_MESSAGES)
+  const formatted = tail
+    .map((message) => `${message.role === "user" ? "User" : "Assistant"}: ${message.content}`)
+    .join("\n")
+
+  if (!formatted) return ""
+  if (formatted.length <= MAX_VOICE_HISTORY_CHARS) return formatted
+
+  return `...${formatted.slice(formatted.length - MAX_VOICE_HISTORY_CHARS)}`
+}
+
 export function FloatingChatBubble() {
   const pathname = usePathname()
   const { currentUser, currentBankingUserId } = useRole()
@@ -589,12 +605,14 @@ export function FloatingChatBubble() {
       userId: currentBankingUserId || "",
       customer_id: currentBankingUserId || "",
       profile_id: currentUser?.id || "",
+      conversation_history: formatVoiceConversationHistory(messages),
     },
     metadata: {
       userId: currentUser?.id,
       customerId: currentBankingUserId,
       agentId,
       currentPage: pathname,
+      conversationHistory: formatVoiceConversationHistory(messages),
     },
     onCallStart: (newCallId) => {
       voiceStartIndexRef.current = messagesRef.current.length

@@ -40,12 +40,31 @@ function extractUserMessage(body: any): string | null {
   )
 }
 
+function extractConversationHistory(body: any): string | null {
+  return (
+    body?.conversation_history ||
+    body?.conversationHistory ||
+    body?.conversation?.history ||
+    body?.args?.conversation_history ||
+    body?.args?.conversationHistory ||
+    null
+  )
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
     const userMessage = extractUserMessage(body)
-    const callId = body?.call_id || body?.callId || body?.conversation_id || null
-    const currentPage = body?.currentPage || "/home"
+    const conversationHistory = extractConversationHistory(body)
+    const callId =
+      body?.call_id ||
+      body?.callId ||
+      body?.conversation_id ||
+      body?.args?.call_id ||
+      body?.args?.callId ||
+      null
+    const currentPage =
+      body?.currentPage || body?.args?.currentPage || body?.args?.current_page || "/home"
 
     const userId = SARAH_VOICE_USER_ID
 
@@ -127,6 +146,7 @@ export async function POST(req: Request) {
         call_id: callId,
         user_message: userMessage,
         current_page: currentPage,
+        conversation_history: conversationHistory,
       },
       supabase_context: {
         user_id: userId,

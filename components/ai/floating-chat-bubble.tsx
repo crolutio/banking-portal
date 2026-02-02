@@ -601,6 +601,7 @@ export function FloatingChatBubble() {
       customer_id: currentBankingUserId || "",
       profile_id: currentUser?.id || "",
       conversation_history: formatVoiceConversationHistory(messages),
+      conversationHistory: formatVoiceConversationHistory(messages),
     },
     metadata: {
       userId: currentUser?.id,
@@ -608,6 +609,7 @@ export function FloatingChatBubble() {
       agentId,
       currentPage: pathname,
       conversationHistory: formatVoiceConversationHistory(messages),
+      conversation_history: formatVoiceConversationHistory(messages),
     },
     onCallStart: (newCallId) => {
       voiceStartIndexRef.current = messagesRef.current.length

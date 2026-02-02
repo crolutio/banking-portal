@@ -48,15 +48,7 @@ INSERT INTO connected_apps (id, user_id, app_id, is_active, connected_at, last_s
   '{"monthly_spend": 15000, "payment_history": "perfect", "prime_member": true}'),
 ('abcd4444-0003-0001-0001-000000000003', '44444444-4444-4444-4444-444444444444', 'aaaa0003-0001-0001-0001-000000000003', 
   true, NOW() - INTERVAL '1 year', NOW() - INTERVAL '1 day',
-  '{"avg_bill": 2500, "payment_history": "perfect", "properties": 3}'),
-
--- Fatima Hassan's connected apps
-('abcd5555-0001-0001-0001-000000000001', '55555555-5555-5555-5555-555555555555', 'aaaa0007-0001-0001-0001-000000000007', 
-  true, NOW() - INTERVAL '4 months', NOW() - INTERVAL '2 days',
-  '{"monthly_spend": 1200, "payment_history": "good"}'),
-('abcd5555-0002-0001-0001-000000000002', '55555555-5555-5555-5555-555555555555', 'aaaa0008-0001-0001-0001-000000000008', 
-  true, NOW() - INTERVAL '3 months', NOW() - INTERVAL '1 day',
-  '{"plan": "postpaid", "monthly_bill": 250, "payment_history": "on_time"}')
+  '{"avg_bill": 2500, "payment_history": "perfect", "properties": 3}')
 
 ON CONFLICT (id) DO NOTHING;
 

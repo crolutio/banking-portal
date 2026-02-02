@@ -332,13 +332,13 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
 
   return (
     <aside className={cn("flex flex-col bg-sidebar text-sidebar-foreground", className)}>
-      <div className="flex items-center justify-between px-4 min-h-[120px] border-b border-sidebar-border">
-        <div className="flex items-center gap-3 py-8">
+      <div className="relative flex items-center justify-center px-4 min-h-[120px] border-b border-sidebar-border">
+        <div className="flex items-center justify-center py-8">
           <Image 
             src={logoSrc}
             alt="Aideology" 
-            width={192} 
-            height={192}
+            width={288} 
+            height={288}
             className="object-contain"
           />
         </div>
@@ -347,7 +347,7 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="h-8 w-8 lg:hidden hover:bg-sidebar-accent transition-all duration-200 hover:rotate-90"
+            className="absolute right-4 h-8 w-8 lg:hidden hover:bg-sidebar-accent transition-all duration-200 hover:rotate-90"
           >
             <X className="h-5 w-5" />
             <span className="sr-only">Close sidebar</span>

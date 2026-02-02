@@ -4,6 +4,8 @@ import { createDirectClient } from "@/lib/supabase/direct-client"
 
 export const runtime = "nodejs"
 
+const SARAH_VOICE_USER_ID = "4e140685-8f38-49ff-aae0-d6109c46873d"
+
 // Simple, fast voice-only handler for Vapi.
 // Does NOT use LangGraph – it just pulls key numbers for the user.
 async function buildSimpleVoiceAnswer(userId: string): Promise<string> {
@@ -12,7 +14,9 @@ async function buildSimpleVoiceAnswer(userId: string): Promise<string> {
 
     const { data: accounts, error } = await supabase
       .from("accounts")
-      .select("id, name, balance, available_balance, currency")
+      .select(
+        "id, name, type, status, balance, available_balance, currency, account_number, iban",
+      )
       .eq("customer_id", userId)
 
     if (error) {
@@ -27,6 +31,13 @@ async function buildSimpleVoiceAnswer(userId: string): Promise<string> {
     const toNumber = (value: any) => {
       const num = Number(value)
       return Number.isFinite(num) ? num : 0
+    }
+
+    const maskLast4 = (value?: string | null) => {
+      if (!value || typeof value !== "string") return null
+      const digits = value.replace(/\D/g, "")
+      if (digits.length < 4) return null
+      return digits.slice(-4)
     }
 
     // Convert all balances to AED (USD rate = 3.67)
@@ -44,10 +55,35 @@ async function buildSimpleVoiceAnswer(userId: string): Promise<string> {
     const accountCount = accounts.length
     const accountLabel = accountCount === 1 ? "account" : "accounts"
 
+    const accountDetails = accounts.map((account: any, index: number) => {
+      const rate = account.currency === "USD" ? 3.67 : 1
+      const balanceAed = toNumber(account.balance) * rate
+      const availableAed =
+        toNumber(account.available_balance ?? account.balance) * rate
+      const last4 = maskLast4(account.account_number)
+      const ibanLast4 = maskLast4(account.iban)
+
+      const pieces = [
+        `Account ${index + 1}: ${account.name || "Unnamed"} ${
+          account.type ? `(${account.type})` : ""
+        }`.trim(),
+        account.status ? `Status ${account.status}.` : "",
+        `Balance AED ${balanceAed.toFixed(2)}, available AED ${availableAed.toFixed(
+          2,
+        )}.`,
+        last4 ? `Account number ending ${last4}.` : "",
+        ibanLast4 ? `IBAN ending ${ibanLast4}.` : "",
+      ].filter(Boolean)
+
+      return pieces.join(" ")
+    })
+
     // Short, voice-friendly summary – Vapi will just speak this string.
     return `You have ${accountCount} ${accountLabel}. Your total balance is AED ${totalBalance.toFixed(
       2,
-    )}, and your available cash is AED ${availableCash.toFixed(2)}.`
+    )}, and your available cash is AED ${availableCash.toFixed(
+      2,
+    )}. ${accountDetails.join(" ")}`
   } catch (error: any) {
     console.error("[agent/voice] Unexpected error in buildSimpleVoiceAnswer:", error)
     return "I'm sorry, I had trouble looking up your information. Please try again."
@@ -80,7 +116,7 @@ export async function POST(req: Request) {
     
     // Map Vapi placeholders to actual user ID
     if (requestedUserId === "me" || requestedUserId === "user" || !requestedUserId) {
-      requestedUserId = "4e140685-8f38-49ff-aae0-d6109c46873d" // Sarah Chen
+      requestedUserId = SARAH_VOICE_USER_ID // Sarah Chen
     }
     
     // Also check tool call args for userId
@@ -136,13 +172,14 @@ export async function POST(req: Request) {
     // VOICE-ONLY PATH (Vapi) – NO LANGGRAPH
     // -----------------------------------------------------------------------
     if (isVapiRequest) {
+      const voiceUserId = SARAH_VOICE_USER_ID
       console.log("[agent] Handling Vapi voice request WITHOUT LangGraph", {
-        userId,
+        userId: voiceUserId,
         agentId,
         currentPage,
       })
 
-      let answer = await buildSimpleVoiceAnswer(userId)
+      let answer = await buildSimpleVoiceAnswer(voiceUserId)
 
       // Basic cleanup – keep it voice friendly.
       answer = answer

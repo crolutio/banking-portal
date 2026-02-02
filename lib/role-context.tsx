@@ -15,7 +15,6 @@ interface RoleContextType {
 
 const bankingRoleUserMap: Record<UserRole, string> = {
   retail_customer: CUSTOMER_IDS["Sarah Chen"],
-  sme_customer: CUSTOMER_IDS["Fatima Hassan"],
   relationship_manager: CUSTOMER_IDS["James Rodriguez"],
   risk_compliance: CUSTOMER_IDS["David Kim"],
   admin: CUSTOMER_IDS["System Administrator"],
@@ -23,7 +22,6 @@ const bankingRoleUserMap: Record<UserRole, string> = {
 
 const callCenterRoleUserMap: Record<UserRole, string> = {
   retail_customer: "4e140685-8f38-49ff-aae0-d6109c46873d", // Sarah Chen
-  sme_customer: "e9c42918-fad4-422f-b4ba-24bb5943bb67", // Fatima Hassan
   relationship_manager: "51880b1d-3935-49dd-bac6-9469d33d3ee3", // James Rodriguez
   risk_compliance: "2be06428-7933-41f5-a426-f27478e75c1c", // David Kim
   admin: "730b0c66-1feb-432a-9718-e3a9755eea7b", // System Administrator
@@ -31,7 +29,6 @@ const callCenterRoleUserMap: Record<UserRole, string> = {
 
 const roleLabels: Record<UserRole, string> = {
   retail_customer: "Retail Customer",
-  sme_customer: "SME Customer",
   relationship_manager: "Relationship Manager",
   risk_compliance: "Risk & Compliance",
   admin: "Admin",
@@ -88,5 +85,5 @@ export function canAccessAuditLog(role: UserRole): boolean {
 }
 
 export function isCustomer(role: UserRole): boolean {
-  return role === "retail_customer" || role === "sme_customer"
+  return role === "retail_customer"
 }

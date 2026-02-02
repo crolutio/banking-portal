@@ -17,11 +17,7 @@ INSERT INTO savings_goals (id, user_id, name, category, target_amount, current_a
 
 -- Raj Patel's savings goals - Fixed: aaaa4444-2222-4444-4444-444444444444 → aaaa4444-1111-1111-1111-111111111111
 ('abcd4444-0001-0001-0001-000000000001', '44444444-4444-4444-4444-444444444444', 'Villa Down Payment', 'home', 1000000.00, 650000.00, 50000.00, '2025-12-31', 'active', 'aaaa4444-1111-1111-1111-111111111111', true, 'AED', '/modern-house-keys-home-ownership-dream.jpg'),
-('abcd4444-0002-0001-0001-000000000002', '44444444-4444-4444-4444-444444444444', 'Yacht Charter', 'travel', 100000.00, 75000.00, 12500.00, '2025-06-01', 'active', 'aaaa4444-1111-1111-1111-111111111111', true, 'AED', '/placeholder.svg?height=200&width=300'),
-
--- Fatima Hassan's savings goals - Fixed: aaaa5555-2222-5555-5555-555555555555 → aaaa5555-2222-2222-2222-222222222222
-('abcd5555-0001-0001-0001-000000000001', '55555555-5555-5555-5555-555555555555', 'Wedding Fund', 'wedding', 80000.00, 42000.00, 4000.00, '2025-10-01', 'active', 'aaaa5555-2222-2222-2222-222222222222', true, 'AED', '/wedding-celebration-rings-romantic.jpg'),
-('abcd5555-0002-0001-0001-000000000002', '55555555-5555-5555-5555-555555555555', 'Education Course', 'education', 20000.00, 8000.00, 2000.00, '2025-06-01', 'active', 'aaaa5555-1111-1111-1111-111111111111', true, 'AED', '/placeholder.svg?height=200&width=300')
+('abcd4444-0002-0001-0001-000000000002', '44444444-4444-4444-4444-444444444444', 'Yacht Charter', 'travel', 100000.00, 75000.00, 12500.00, '2025-06-01', 'active', 'aaaa4444-1111-1111-1111-111111111111', true, 'AED', '/placeholder.svg?height=200&width=300')
 
 ON CONFLICT (id) DO UPDATE SET
   current_amount = EXCLUDED.current_amount,

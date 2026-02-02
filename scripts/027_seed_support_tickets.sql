@@ -8,7 +8,6 @@ INSERT INTO support_tickets (id, user_id, subject, status, priority, assigned_to
 ('aaaa1001-0001-0001-0001-000000000001', '4e140685-8f38-49ff-aae0-d6109c46873d', 'International transfer pending review', 'open', 'high', '51880b1d-3935-49dd-bac6-9469d33d3ee3', NULL, '2024-12-20T09:10:00Z', '2024-12-20T10:30:00Z'),
 ('aaaa1002-0001-0001-0001-000000000002', '33333333-3333-3333-3333-333333333333', 'Card replacement fee waiver request', 'resolved', 'low', '51880b1d-3935-49dd-bac6-9469d33d3ee3', '2024-12-18T15:00:00Z', '2024-12-18T13:20:00Z', '2024-12-18T15:05:00Z'),
 ('aaaa1003-0001-0001-0001-000000000003', '22222222-2222-2222-2222-222222222222', 'Business account statement for visa', 'in_progress', 'medium', '77777777-7777-7777-7777-777777777777', NULL, '2024-12-17T08:40:00Z', '2024-12-17T12:15:00Z'),
-('aaaa1004-0001-0001-0001-000000000004', 'e9c42918-fad4-422f-b4ba-24bb5943bb67', 'Chargeback on card transaction', 'open', 'high', '51880b1d-3935-49dd-bac6-9469d33d3ee3', NULL, '2024-12-16T16:05:00Z', '2024-12-16T16:45:00Z'),
 ('aaaa1005-0001-0001-0001-000000000005', '44444444-4444-4444-4444-444444444444', 'Mobile app login verification loop', 'resolved', 'medium', '77777777-7777-7777-7777-777777777777', '2024-12-14T11:20:00Z', '2024-12-14T09:30:00Z', '2024-12-14T11:25:00Z'),
 ('aaaa1006-0001-0001-0001-000000000006', '4e140685-8f38-49ff-aae0-d6109c46873d', 'Recurring transfer limit clarification', 'open', 'low', NULL, NULL, '2024-12-13T10:05:00Z', '2024-12-13T10:10:00Z');
 
@@ -39,15 +38,6 @@ INSERT INTO support_messages (id, ticket_id, sender_id, sender_type, content, ci
   'Need official statements for my business account for visa processing. Last 6 months.', NULL, '2024-12-17T08:40:00Z'),
 ('abcd1003-0002-0001-0001-000000000002', 'aaaa1003-0001-0001-0001-000000000003', '77777777-7777-7777-7777-777777777777', 'agent',
   'Got it. We''ll prepare stamped statements and email them within 24 hours.', NULL, '2024-12-17T12:15:00Z'),
-
--- Ticket 4 conversation
-('abcd1004-0001-0001-0001-000000000001', 'aaaa1004-0001-0001-0001-000000000004', 'e9c42918-fad4-422f-b4ba-24bb5943bb67', 'user',
-  'I have a card transaction for AED 2,400 that I don''t recognize. Can you dispute it?', NULL, '2024-12-16T16:05:00Z'),
-('abcd1004-0002-0001-0001-000000000002', 'aaaa1004-0001-0001-0001-000000000004', NULL, 'ai',
-  'I can help file a dispute. Please confirm the merchant name and date so we can proceed.',
-  '[{"source": "Transaction Dispute Policy", "type": "policy"}]', '2024-12-16T16:10:00Z'),
-('abcd1004-0003-0001-0001-000000000003', 'aaaa1004-0001-0001-0001-000000000004', '51880b1d-3935-49dd-bac6-9469d33d3ee3', 'agent',
-  'We''ve opened a dispute case and issued a provisional credit. We''ll update you within 10 business days.', NULL, '2024-12-16T16:45:00Z'),
 
 -- Ticket 5 conversation
 ('abcd1005-0001-0001-0001-000000000001', 'aaaa1005-0001-0001-0001-000000000005', '44444444-4444-4444-4444-444444444444', 'user',

@@ -7,7 +7,6 @@ DECLARE
     u_mohammed UUID := '22222222-2222-2222-2222-222222222222';
     u_emma UUID := '33333333-3333-3333-3333-333333333333';
     u_raj UUID := '44444444-4444-4444-4444-444444444444';
-    u_fatima UUID := '55555555-5555-5555-5555-555555555555';
     
     acc_id UUID;
     card_id UUID;
@@ -23,7 +22,7 @@ DECLARE
     
 BEGIN
     -- 1. Ensure all users have a Current Account if not exists
-    FOR user_rec IN SELECT id, full_name FROM profiles WHERE role IN ('retail_customer', 'sme_customer') LOOP
+    FOR user_rec IN SELECT id, full_name FROM profiles WHERE role IN ('retail_customer') LOOP
         IF NOT EXISTS (SELECT 1 FROM accounts WHERE user_id = user_rec.id AND type = 'current') THEN
             INSERT INTO accounts (user_id, type, name, balance, available_balance, currency, account_number, iban, status)
             VALUES (
@@ -98,7 +97,7 @@ BEGIN
     END LOOP;
 
     -- 3. Add More Cards
-    FOR user_rec IN SELECT id FROM profiles WHERE role IN ('retail_customer', 'sme_customer') LOOP
+    FOR user_rec IN SELECT id FROM profiles WHERE role IN ('retail_customer') LOOP
         IF NOT EXISTS (SELECT 1 FROM cards WHERE user_id = user_rec.id AND type = 'credit') THEN
             acc_id := (SELECT id FROM accounts WHERE user_id = user_rec.id LIMIT 1);
             INSERT INTO cards (user_id, account_id, type, brand, last_four, cardholder_name, expiry_date, status, credit_limit, spent_amount)
@@ -133,9 +132,5 @@ BEGIN
     -- Mortgage for Mohammed
     INSERT INTO loans (user_id, type, principal_amount, remaining_balance, interest_rate, term_months, disbursement_date, next_payment_date, monthly_payment, status)
     VALUES (u_mohammed, 'mortgage', 1500000.00, 1420000.00, 4.5, 300, (NOW() - INTERVAL '2 years')::DATE, (NOW() + INTERVAL '15 days')::DATE, 8500.00, 'active');
-
-    -- Business Loan for Fatima
-    INSERT INTO loans (user_id, type, principal_amount, remaining_balance, interest_rate, term_months, disbursement_date, next_payment_date, monthly_payment, status)
-    VALUES (u_fatima, 'business', 500000.00, 350000.00, 6.0, 60, (NOW() - INTERVAL '18 months')::DATE, (NOW() + INTERVAL '10 days')::DATE, 9600.00, 'active');
 
 END $$;

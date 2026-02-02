@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 import { CitationBadge } from "@/components/ai/citation-badge"
-import { useRole } from "@/lib/role-context"
+import { isCustomer, useRole } from "@/lib/role-context"
 import { AIAction } from "@/lib/types"
 import { AI_AGENT_PERSONAS, type AIAgentId } from "@/lib/ai/agents"
 import { LoanApprovalCard, OptimizationResultCard, SuspiciousTransactionsCard } from "@/components/ai/special-cards"
@@ -427,7 +427,7 @@ export function AIBankerChatInterface({
             style={{ borderColor: theme.accent, color: theme.badgeText, backgroundColor: theme.badgeBg }}
           >
             <Sparkles className="h-3 w-3 mr-1" style={{ color: theme.accent }} />
-            {currentRole === "retail_customer" || currentRole === "sme_customer" ? "Customer Mode" : "Staff Mode"}
+            {isCustomer(currentRole) ? "Customer Mode" : "Staff Mode"}
           </Badge>
         </div>
       )}

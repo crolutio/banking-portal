@@ -8,7 +8,6 @@
 export const CUSTOMER_IDS = {
   // Existing demo users
   "Sarah Chen": "4e140685-8f38-49ff-aae0-d6109c46873d",
-  "Fatima Hassan": "e9c42918-fad4-422f-b4ba-24bb5943bb67",
   "James Rodriguez": "51880b1d-3935-49dd-bac6-9469d33d3ee3",
   "David Kim": "2be06428-7933-41f5-a426-f27478e75c1c",
   "System Administrator": "730b0c66-1feb-432a-9718-e3a9755eea7b",

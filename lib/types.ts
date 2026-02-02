@@ -1,5 +1,5 @@
 // User & Role Types
-export type UserRole = "retail_customer" | "sme_customer" | "relationship_manager" | "risk_compliance" | "admin"
+export type UserRole = "retail_customer" | "relationship_manager" | "risk_compliance" | "admin"
 
 export interface User {
   id: string

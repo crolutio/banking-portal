@@ -4,7 +4,6 @@
 -- User roles enum
 CREATE TYPE user_role AS ENUM (
   'retail_customer',
-  'sme_customer', 
   'relationship_manager',
   'risk_compliance',
   'admin'

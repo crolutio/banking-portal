@@ -42,17 +42,6 @@ export const users: User[] = [
     createdAt: "2021-08-22",
   },
   {
-    id: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    name: "Fatima Hassan",
-    email: "fatima.hassan@email.com",
-    role: "sme_customer",
-    avatar: "/professional-woman-portrait.png",
-    rmId: "77777777-7777-7777-7777-777777777777",
-    segment: "Premium",
-    kycStatus: "Pending",
-    createdAt: "2023-01-10",
-  },
-  {
     id: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     name: "James Rodriguez",
     email: "james.rm@bank.com",
@@ -138,29 +127,6 @@ export const accounts: Account[] = [
     accountNumber: "2345678902",
     status: "active",
   },
-  {
-    id: "acc_6",
-    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    name: "Business Operating Account",
-    type: "business",
-    currency: "AED",
-    balance: 567890.25,
-    availableBalance: 520890.25,
-    accountNumber: "3456789012",
-    iban: "AE070333456789012345678",
-    status: "active",
-  },
-  {
-    id: "acc_7",
-    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    name: "Business Savings",
-    type: "savings",
-    currency: "AED",
-    balance: 1250000.0,
-    availableBalance: 1250000.0,
-    accountNumber: "3456789013",
-    status: "active",
-  },
 ]
 
 // Transactions (sample - 100 transactions)
@@ -239,7 +205,6 @@ function generateTransactions(accountId: string, count: number, startBalance: nu
 export const transactions: Transaction[] = [
   ...generateTransactions("acc_1", 35, 45750.5),
   ...generateTransactions("acc_4", 40, 892450.75),
-  ...generateTransactions("acc_6", 25, 567890.25),
 ]
 
 // Cards
@@ -293,17 +258,6 @@ export const cards: Card[] = [
     limit: 250000,
     spent: 45000,
     cardholderName: "MICHAEL CHEN",
-  },
-  {
-    id: "card_5",
-    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    accountId: "acc_6",
-    type: "debit",
-    brand: "Mastercard",
-    lastFour: "3344",
-    expiryDate: "11/27",
-    status: "active",
-    cardholderName: "TECHSTART SOLUTIONS",
   },
 ]
 
@@ -383,18 +337,6 @@ export const loans: Loan[] = [
     term: 240,
     monthlyPayment: 14875.5,
     nextPaymentDate: "2025-01-01",
-    status: "active",
-  },
-  {
-    id: "loan_3",
-    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    type: "credit_line",
-    amount: 500000,
-    remainingBalance: 325000,
-    interestRate: 7.99,
-    term: 24,
-    monthlyPayment: 22650.0,
-    nextPaymentDate: "2025-01-10",
     status: "active",
   },
 ]
@@ -607,16 +549,6 @@ export const riskAlerts: RiskAlert[] = [
     assignedTo: "2be06428-7933-41f5-a426-f27478e75c1c",
   },
   {
-    id: "alert_2",
-    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    type: "aml",
-    severity: "high",
-    title: "Large cash deposits flagged",
-    description: "Multiple cash deposits exceeding threshold within 7 days",
-    status: "open",
-    createdAt: "2024-12-17T09:15:00Z",
-  },
-  {
     id: "alert_3",
     type: "policy_breach",
     severity: "low",
@@ -664,16 +596,6 @@ export const riskAlerts: RiskAlert[] = [
     status: "investigating",
     createdAt: "2024-12-12T08:00:00Z",
     assignedTo: "2be06428-7933-41f5-a426-f27478e75c1c",
-  },
-  {
-    id: "alert_8",
-    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    type: "fraud",
-    severity: "medium",
-    title: "Unusual payroll pattern",
-    description: "Payroll amount significantly higher than historical average",
-    status: "open",
-    createdAt: "2024-12-11T12:15:00Z",
   },
   {
     id: "alert_9",
@@ -825,20 +747,6 @@ export const auditEvents: AuditEvent[] = [
     userConfirmed: true,
   },
   {
-    id: "audit_9",
-    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    userRole: "sme_customer",
-    action: "AI query: Fee explanation",
-    actionType: "ai_response",
-    sourcesAccessed: ["Fees policy v2.1", "Transaction history"],
-    timestamp: "2024-12-14T11:00:00Z",
-    redactions: [],
-    riskFlags: [],
-    details: "Customer asked about international transfer fees",
-    aiSuggestion: "International transfer fee is 0.5% of amount (min AED 25, max AED 500)",
-    userConfirmed: true,
-  },
-  {
     id: "audit_10",
     userId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     userRole: "relationship_manager",
@@ -904,19 +812,6 @@ export const auditEvents: AuditEvent[] = [
     details: "Closed false positive AML alert",
     userConfirmed: true,
   },
-  {
-    id: "audit_15",
-    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    userRole: "sme_customer",
-    action: "Bulk payment initiated",
-    actionType: "transfer",
-    sourcesAccessed: ["Account ledger", "Beneficiary list"],
-    timestamp: "2024-12-09T10:00:00Z",
-    redactions: ["Employee details"],
-    riskFlags: [],
-    details: "Monthly payroll processed - 15 payments totaling AED 125,000",
-    userConfirmed: true,
-  },
 ]
 
 // Client Interactions (for RM)
@@ -953,14 +848,6 @@ export const clientInteractions: ClientInteraction[] = [
     summary: "Wealth planning session. Discussed estate planning and trust services.",
     date: "2024-12-05T11:00:00Z",
   },
-  {
-    id: "interaction_5",
-    clientId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    rmId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
-    type: "call",
-    summary: "Discussed credit line increase for business expansion.",
-    date: "2024-12-08T16:00:00Z",
-  },
 ]
 
 // Next Best Actions (for RM)
@@ -995,14 +882,6 @@ export const nextBestActions: NextBestAction[] = [
     reason: "Mortgage rate renewal in 3 months",
     priority: "high",
     product: "Home Loan",
-  },
-  {
-    id: "nba_5",
-    clientId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    action: "Propose business insurance",
-    reason: "Growing business with no liability coverage",
-    priority: "medium",
-    product: "Business Insurance",
   },
 ]
 
@@ -1057,29 +936,6 @@ export const supportTickets: SupportTicket[] = [
         sender: "agent",
         content: "We will email stamped statements within 24 hours.",
         timestamp: "2024-12-17T12:15:00Z",
-      },
-    ],
-  },
-  {
-    id: "ticket_3",
-    userId: "e9c42918-fad4-422f-b4ba-24bb5943bb67",
-    subject: "Chargeback on card transaction",
-    status: "open",
-    priority: "high",
-    createdAt: "2024-12-16T16:05:00Z",
-    messages: [
-      {
-        id: "msg_6",
-        sender: "user",
-        content: "I have a card transaction I do not recognize and want to dispute it.",
-        timestamp: "2024-12-16T16:05:00Z",
-      },
-      {
-        id: "msg_7",
-        sender: "ai",
-        content: "Please confirm the merchant name and date so we can proceed with the dispute.",
-        timestamp: "2024-12-16T16:10:00Z",
-        citations: [{ id: "cite_2", source: "Transaction Dispute Policy", type: "policy" }],
       },
     ],
   },

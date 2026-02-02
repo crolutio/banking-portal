@@ -14,12 +14,7 @@ INSERT INTO loans (id, user_id, product_id, type, principal_amount, remaining_ba
 -- Raj Patel - Mortgage
 ('aaaa4444-0001-0001-0001-000000000001', '44444444-4444-4444-4444-444444444444', 
   (SELECT id FROM loan_products WHERE name = 'Home Mortgage' LIMIT 1),
-  'mortgage', 2500000.00, 2350000.00, 4.25, 300, 13500.00, 'active', '2023-01-15', '2024-12-15'),
-
--- Fatima Hassan - Auto Loan
-('aaaa5555-0001-0001-0001-000000000001', '55555555-5555-5555-5555-555555555555', 
-  (SELECT id FROM loan_products WHERE name = 'Auto Loan' LIMIT 1),
-  'auto', 85000.00, 68000.00, 5.75, 48, 1989.00, 'active', '2023-09-01', '2024-12-01')
+  'mortgage', 2500000.00, 2350000.00, 4.25, 300, 13500.00, 'active', '2023-01-15', '2024-12-15')
 
 ON CONFLICT (id) DO UPDATE SET
   remaining_balance = EXCLUDED.remaining_balance,

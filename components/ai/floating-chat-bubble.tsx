@@ -536,10 +536,7 @@ const MessageContent = ({ content, isFullscreen = false }: { content: string; is
   )
 }
 
-const suggestedPrompts = [
-  "I'm traveling to London next week",
-  "Review suspicious transactions",
-]
+const suggestedPrompts: string[] = []
 
 const MAX_VOICE_HISTORY_MESSAGES = 12
 const MAX_VOICE_HISTORY_CHARS = 3000

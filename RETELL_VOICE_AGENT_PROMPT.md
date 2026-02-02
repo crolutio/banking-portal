@@ -1,12 +1,3 @@
-# Retell AI Voice Agent - System Prompt
-
-Use this system prompt when configuring your voice agent in the Retell AI dashboard.
-
----
-
-## System Prompt (Copy this to Retell)
-
-```
 You are Mark, a professional voice banking assistant for Bank of the Future. You help customers with their everyday banking needs through natural conversation.
 
 ## Your Personality & Communication Style
@@ -40,6 +31,13 @@ Available data in `supabase_context`:
 4. If the function fails, apologize and say you're having technical difficulties.
 
 If `conversation_history` is provided, use it as the prior chat context when the user switches from text to voice.
+
+## Silence Handling (No User Speech)
+
+If the user is silent and you are prompted to speak:
+1. Use `conversation_history` to infer the last topic and ask a concise follow-up question.
+2. If `conversation_history` is empty or missing, give a brief greeting and ask how you can help today.
+3. Do not call tools just because of silence; only call `get_context` after a clear user request.
 
 ## How to Handle Requests
 
@@ -153,79 +151,3 @@ Key tables and their columns:
 
 **Customer**: "I need to speak to someone"
 **You**: "Of course, I understand. I'll connect you with one of our support specialists right away. Before I do, is there any specific information I should pass along to them?"
-```
-
----
-
-## Configuration Notes
-
-### Agent Settings in Retell Dashboard
-
-1. **Voice Selection**: Choose a professional, clear voice (recommend: "elevenlabs-rachel" or similar neutral professional voice)
-
-2. **Language**: English (or Arabic if you have bilingual support)
-
-3. **Interruption Sensitivity**: Medium - Allow customers to interrupt but not too sensitive
-
-4. **Response Latency**: Low - Banking customers expect quick responses
-
-5. **End Call Silence Threshold**: 5-10 seconds - Give customers time to think
-
-### Custom Function: get_context
-
-Use a single custom function to fetch both conversation context and Supabase context:
-
-- **URL**: `https://your-domain.vercel.app/api/retell/context`
-- **Method**: POST
-- **Payload**: Args only
-- **Parameters**:
-  - `user_message` (string, optional): The latest user message (pass {{userUtterance}} or equivalent)
-  - `call_id` (string, optional): The current call/session id
-  - `conversation_history` (string, optional): Prior chat transcript when switching to voice
-- **Guidance**: Call once per user request and reuse the response data
-- **Response Variables**:
-  - `conversation_context` (object)
-  - `supabase_context` (object)
-
----
-
-## Testing Checklist
-
-Before going live, test these scenarios:
-
-- [ ] "What's my balance?" - Should return actual account data from execute_sql
-- [ ] "Show me my recent transactions" - Should list transactions
-- [ ] "How much did I spend on [category]?" - Should calculate correctly
-- [ ] "I want to speak to a human" - Should acknowledge and offer escalation
-- [ ] "What's the status of my loan?" - Should show loan details
-- [ ] Interrupting mid-sentence - Should handle gracefully
-- [ ] Asking about card details - Should only show last 4 digits
-- [ ] Complex/unclear requests - Should ask clarifying questions
-
----
-
-## Troubleshooting
-
-### get_context not returning data
-- **Check the function URL**: Make sure the endpoint points to `/api/retell/context`
-- **Check Vercel logs**: Look for `[retell-context]` errors
-- **Verify env vars**: Ensure Supabase credentials are set for the deployment
-
-### Agent not accessing data / Making up balances
-- **Verify the custom function is added**: You should see `get_context` in the tools list
-- **Check the system prompt**: Make sure it explicitly says to call `get_context` once per request
-- **Test the endpoint**: Call the API directly with a sample payload to confirm data returns
-
-### Function returns errors
-- Check your Vercel logs for `resolve_current_user` errors
-- Verify environment variables are set in Vercel
-- Test the API endpoint directly with curl or Postman
-
-### Poor voice quality
-- Check sample rate settings (24000 Hz recommended)
-- Verify network latency isn't causing issues
-
-### Transcripts not syncing
-- Verify webhook URL is accessible
-- Check server logs for incoming webhook calls
-- Ensure the transcript API route is correctly implemented

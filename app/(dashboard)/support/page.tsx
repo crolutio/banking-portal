@@ -52,7 +52,7 @@ import { RetellChatVoiceButton } from "@/components/ai/retell-chat-voice-button"
 import type { DbConversation, DbMessage } from "@/lib/types"
 import { useCustomerConversations } from "@/lib/hooks/useCustomerConversations"
 import { useConversationMessages } from "@/lib/hooks/useConversationMessages"
-import { createConversation, requestConversationHandover } from "@/lib/supportApi"
+import { createConversation, requestConversationHandover, sendAiMessage } from "@/lib/supportApi"
 
 const CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"]
 
@@ -73,6 +73,8 @@ export default function SupportPage() {
   const [escalating, setEscalating] = useState(false)
   const [pendingFirstMessage, setPendingFirstMessage] = useState<string | null>(null)
   const [pendingConversationId, setPendingConversationId] = useState<string | null>(null)
+  const [voiceDisabledOverride, setVoiceDisabledOverride] = useState(false)
+  const [forceEndVoiceCall, setForceEndVoiceCall] = useState(false)
 
   const { conversations, refresh } = useCustomerConversations({
     customerId: customerId || "",
@@ -255,6 +257,59 @@ export default function SupportPage() {
     return status
       .replace(/_/g, " ")
       .replace(/\b\w/g, (char) => char.toUpperCase())
+  }
+
+  const isEscalationIntent = (text: string) => {
+    const normalized = text.toLowerCase()
+    return (
+      normalized.includes("escalate") ||
+      normalized.includes("human") ||
+      normalized.includes("agent") ||
+      normalized.includes("representative") ||
+      normalized.includes("real person") ||
+      normalized.includes("speak to someone")
+    )
+  }
+
+  useEffect(() => {
+    if (!selectedConversation) {
+      setVoiceDisabledOverride(false)
+      setForceEndVoiceCall(false)
+      return
+    }
+    const isEscalated =
+      selectedConversation.status === "escalated" || selectedConversation.handover_required === true
+    if (isEscalated) {
+      setVoiceDisabledOverride(true)
+      setForceEndVoiceCall(true)
+    } else {
+      setVoiceDisabledOverride(false)
+      setForceEndVoiceCall(false)
+    }
+  }, [selectedConversation?.id, selectedConversation?.status, selectedConversation?.handover_required])
+
+  const handleVoiceUserTurnComplete = async (text: string) => {
+    if (!selectedConversation) return
+    await send(text)
+
+    if (isEscalationIntent(text)) {
+      setForceEndVoiceCall(true)
+      setVoiceDisabledOverride(true)
+    }
+  }
+
+  const handleVoiceAgentTurnComplete = async (text: string) => {
+    if (!selectedConversation || !text.trim()) return
+    try {
+      await sendAiMessage({
+        conversation_id: selectedConversation.id,
+        content: text,
+        channel: "chat",
+        provider: "retell",
+      })
+    } catch (e) {
+      console.error("Failed to store voice agent message", e)
+    }
   }
 
   const renderInlineMarkdown = (text: string) => {
@@ -715,22 +770,18 @@ export default function SupportPage() {
                       />
                       {/* Retell Voice Button - sends transcripts to chat */}
                       {/* Hide voice button when escalated (human-only mode) */}
-                      {selectedConversation?.status !== "escalated" && !selectedConversation?.handover_required && (
+                      {!voiceDisabledOverride &&
+                        selectedConversation?.status !== "escalated" &&
+                        !selectedConversation?.handover_required && (
                         <RetellChatVoiceButton
-                          onUserTurnComplete={(text) => {
-                            // Send user's complete voice message to the conversation
-                            send(text).catch(console.error)
-                          }}
-                          onAgentTurnComplete={(text) => {
-                            // Agent responses are shown in real-time via the voice
-                            // Optionally log or track them
-                            console.log("[Voice Agent Complete]", text)
-                          }}
+                          onUserTurnComplete={(text) => handleVoiceUserTurnComplete(text).catch(console.error)}
+                          onAgentTurnComplete={(text) => handleVoiceAgentTurnComplete(text)}
                           metadata={{
                             conversationId: selectedConversation?.id,
                             customerId: customerId,
                             subject: selectedConversation?.subject,
                           }}
+                          forceEndCall={forceEndVoiceCall}
                           dynamicVariables={{
                             customer_name: currentUser?.name || "Customer",
                             ticket_subject: selectedConversation?.subject || "Support request",

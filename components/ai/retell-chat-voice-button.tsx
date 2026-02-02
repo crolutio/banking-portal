@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Mic, MicOff, Loader2, Phone } from "lucide-react"
@@ -61,6 +61,10 @@ interface RetellChatVoiceButtonProps {
    * Whether the button is disabled
    */
   disabled?: boolean
+  /**
+   * Force the call to end if currently connected
+   */
+  forceEndCall?: boolean
 }
 
 /**
@@ -86,6 +90,7 @@ export function RetellChatVoiceButton({
   className,
   showExpanded = false,
   disabled = false,
+  forceEndCall = false,
 }: RetellChatVoiceButtonProps) {
   // Track the last processed message content to avoid duplicates
   const [lastUserContent, setLastUserContent] = useState<string>("")
@@ -129,6 +134,7 @@ export function RetellChatVoiceButton({
     transcript,
     error,
     toggleCall,
+    endCall,
   } = useRetellVoice({
     agentId,
     metadata,
@@ -155,6 +161,12 @@ export function RetellChatVoiceButton({
     if (error) return `Error: ${error}. Click to retry`
     return "Start voice conversation"
   }
+
+  useEffect(() => {
+    if (forceEndCall && isConnected) {
+      endCall()
+    }
+  }, [forceEndCall, isConnected, endCall])
 
   // Simple button mode
   if (!showExpanded) {

@@ -388,6 +388,69 @@ export async function sendAgentMessage(args: {
   return data as DbMessage;
 }
 
+export async function sendAiMessage(args: {
+  conversation_id: string;
+  content: string;
+  is_internal?: boolean;
+  channel?: string;
+  provider?: string;
+  provider_message_id?: string;
+  from_address?: string;
+  to_address?: string;
+  status?: "received" | "sent";
+  metadata?: Record<string, unknown> | null;
+}): Promise<DbMessage> {
+  const endpoint = "POST /api/messages (Supabase: messages.insert - ai)";
+  console.log(`[Support API] Calling: ${endpoint}`);
+  console.log(`[Support API] Request data:`, {
+    conversation_id: args.conversation_id,
+    is_internal: !!args.is_internal,
+    content_length: args.content.length,
+  });
+
+  const supabase = createCallCenterClient();
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: args.conversation_id,
+      sender_type: "ai",
+      sender_customer_id: null,
+      sender_agent_id: null,
+      content: args.content,
+      is_internal: !!args.is_internal,
+      source: "banking",
+      channel: args.channel ?? "chat",
+      provider: args.provider ?? "retell",
+      provider_message_id: args.provider_message_id ?? null,
+      from_address: args.from_address ?? null,
+      to_address: args.to_address ?? null,
+      status: args.status ?? "sent",
+      metadata: args.metadata ?? null,
+      created_at: now,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error(`[Support API] ${endpoint} - Error:`, {
+      status: "ERROR",
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    throw new Error(`Failed to send AI message: ${error.message}`);
+  }
+
+  console.log(`[Support API] ${endpoint} - Success:`, {
+    status: "200 OK",
+    message_id: data?.id,
+  });
+
+  return data as DbMessage;
+}
+
 export async function requestConversationHandover(args: {
   conversation_id: string;
   channel?: string;

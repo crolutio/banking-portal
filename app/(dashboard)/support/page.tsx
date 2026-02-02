@@ -46,9 +46,7 @@ import {
   FileText,
   Headphones,
   UserPlus,
-  Mic,
 } from "lucide-react"
-import { RetellChatVoiceButton } from "@/components/ai/retell-chat-voice-button"
 import type { DbConversation, DbMessage } from "@/lib/types"
 import { useCustomerConversations } from "@/lib/hooks/useCustomerConversations"
 import { useConversationMessages } from "@/lib/hooks/useConversationMessages"
@@ -769,31 +767,6 @@ export default function SupportPage() {
                           }
                         }}
                       />
-                      {/* Retell Voice Button - sends transcripts to chat */}
-                      {/* Hide voice button when escalated (human-only mode) */}
-                      {!voiceDisabledOverride &&
-                        selectedConversation?.status !== "escalated" &&
-                        !selectedConversation?.handover_required && (
-                        <RetellChatVoiceButton
-                          onUserTurnComplete={(text) => handleVoiceUserTurnComplete(text).catch(console.error)}
-                          onAgentTurnComplete={(text) => handleVoiceAgentTurnComplete(text)}
-                          agentId={retellAgentId}
-                          metadata={{
-                            conversationId: selectedConversation?.id,
-                            customerId: customerId,
-                            subject: selectedConversation?.subject,
-                          }}
-                          forceEndCall={forceEndVoiceCall}
-                          dynamicVariables={{
-                            customer_name: currentUser?.name || "Customer",
-                            ticket_subject: selectedConversation?.subject || "Support request",
-                            user_id: currentUser?.id || "",
-                            userId: currentUser?.id || "",
-                            profile_id: currentUser?.id || "",
-                            customer_id: "",
-                          }}
-                        />
-                      )}
                       <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
                         <Send className="h-4 w-4" />
                       </Button>
@@ -817,8 +790,8 @@ export default function SupportPage() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-8 text-center">
                       {selectedConversation?.status === "escalated" || selectedConversation?.handover_required
-                        ? "You're now connected with a human agent. Voice mode is disabled."
-                        : <>AI will try to help first. Click <Mic className="h-3 w-3 inline" /> for voice, or &quot;Escalate&quot; to speak with a human.</>
+                        ? "You're now connected with a human agent."
+                        : "AI will try to help first. Use Escalate to speak with a human."
                       }
                     </p>
                   </div>

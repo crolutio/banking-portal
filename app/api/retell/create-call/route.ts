@@ -9,7 +9,8 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const agentId = body?.agentId || process.env.RETELL_AGENT_ID
+    const agentId =
+      body?.agentId || process.env.RETELL_AGENT_ID || process.env.NEXT_PUBLIC_RETELL_AGENT_ID
 
     if (!agentId) {
       return NextResponse.json({ error: "Missing agentId" }, { status: 400 })

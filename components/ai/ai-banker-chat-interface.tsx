@@ -74,10 +74,6 @@ const scopeOptions: ScopeOption[] = [
 ]
 
 const suggestedPrompts = [
-  "I want to take a loan for my Japan trip",
-  "Request a new loan for 50,000 AED",
-  "Show me a payment schedule for a 3-year loan",
-  "Analyze my spending and find savings opportunities",
   "I'm traveling to London next week",
   "Review suspicious transactions",
 ]

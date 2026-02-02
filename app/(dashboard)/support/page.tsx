@@ -61,6 +61,7 @@ export default function SupportPage() {
   const { currentUser, currentRole } = useRole()
   const customerId = currentUser?.id
   const { openChatWithMessage } = useFloatingChat()
+  const retellAgentId = process.env.NEXT_PUBLIC_RETELL_AGENT_ID
 
   
   const [selectedConversation, setSelectedConversation] = useState<DbConversation | null>(null)
@@ -776,6 +777,7 @@ export default function SupportPage() {
                         <RetellChatVoiceButton
                           onUserTurnComplete={(text) => handleVoiceUserTurnComplete(text).catch(console.error)}
                           onAgentTurnComplete={(text) => handleVoiceAgentTurnComplete(text)}
+                          agentId={retellAgentId}
                           metadata={{
                             conversationId: selectedConversation?.id,
                             customerId: customerId,

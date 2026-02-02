@@ -259,11 +259,12 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
     setError(null)
 
     try {
+      const resolvedAgentId = agentId ?? process.env.NEXT_PUBLIC_RETELL_AGENT_ID
       const response = await fetch("/api/retell/create-call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          agentId,
+          agentId: resolvedAgentId,
           metadata,
           dynamicVariables,
         }),

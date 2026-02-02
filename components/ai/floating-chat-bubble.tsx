@@ -537,10 +537,6 @@ const MessageContent = ({ content, isFullscreen = false }: { content: string; is
 }
 
 const suggestedPrompts = [
-  "I want to take a loan for my Japan trip",
-  "Request a new loan for 50,000 AED",
-  "Show me a payment schedule for a 3-year loan",
-  "Analyze my spending and find savings opportunities",
   "I'm traveling to London next week",
   "Review suspicious transactions",
 ]
@@ -567,6 +563,7 @@ export function FloatingChatBubble() {
   const { theme } = useTheme()
   const { chatState, agentId, initialMessage, closeChat, minimizeChat, normalizeChat, toggleFullscreen } = useFloatingChat()
   const persona = AI_AGENT_PERSONAS[agentId] ?? AI_AGENT_PERSONAS.banker
+  const retellAgentId = process.env.NEXT_PUBLIC_RETELL_AGENT_ID
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const lastSentMessageRef = useRef<string>("")
   const previousStateRef = useRef<string>(chatState)
@@ -599,6 +596,7 @@ export function FloatingChatBubble() {
     toggleCall,
     endCall,
   } = useRetellVoice({
+    agentId: retellAgentId,
     dynamicVariables: {
       customer_name: currentUser?.name || "Customer",
       user_id: currentBankingUserId || "",
@@ -733,12 +731,12 @@ export function FloatingChatBubble() {
   const getMinimizeAnimation = () => {
     const prevState = previousStateRef.current
     if (prevState === "normal") {
-      return "animate-in fade-in slide-in-from-left-full zoom-in-50 duration-500"
+      return "animate-in fade-in slide-in-from-left-full duration-500"
     }
     if (prevState === "fullscreen") {
-      return "animate-in fade-in zoom-in-0 duration-700"
+      return "animate-in fade-in duration-700"
     }
-    return "animate-in fade-in zoom-in duration-500"
+    return "animate-in fade-in duration-500"
   }
 
   // Minimized state - small floating bubble in corner
@@ -777,17 +775,17 @@ export function FloatingChatBubble() {
     
     // Entering from minimized
     if (prevState === "minimized" && chatState === "normal") {
-      return "animate-in fade-in slide-in-from-bottom-8 zoom-in-95 duration-700"
+      return "animate-in fade-in slide-in-from-bottom-8 duration-700"
     }
     
     // Entering fullscreen
     if (prevState === "normal" && chatState === "fullscreen") {
-      return "animate-in fade-in zoom-in-90 duration-500"
+      return "animate-in fade-in duration-500"
     }
     
     // Exiting fullscreen (zoom out effect)
     if (prevState === "fullscreen" && chatState === "normal") {
-      return "animate-in fade-in zoom-in-90 duration-500"
+      return "animate-in fade-in duration-500"
     }
     
     return ""

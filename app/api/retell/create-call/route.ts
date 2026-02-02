@@ -25,6 +25,8 @@ export async function POST(request: Request) {
       conversation_history: conversationHistory,
       conversationHistory: conversationHistory,
     }
+    console.log("[Retell] create-call received dynamicVariables:", JSON.stringify(dynamicVariables, null, 2))
+    console.log("[Retell] conversation_history length:", conversationHistory.length)
 
     if (!agentId) {
       return NextResponse.json({ error: "Missing agentId" }, { status: 400 })

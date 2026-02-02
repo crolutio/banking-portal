@@ -107,6 +107,9 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
   const onCallStartRef = useRef(onCallStart)
   const onCallEndRef = useRef(onCallEnd)
   const onErrorRef = useRef(onError)
+  const metadataRef = useRef(metadata)
+  const dynamicVariablesRef = useRef(dynamicVariables)
+  const agentIdRef = useRef(agentId)
 
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
@@ -143,6 +146,18 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
   useEffect(() => {
     onErrorRef.current = onError
   }, [onError])
+
+  useEffect(() => {
+    metadataRef.current = metadata
+  }, [metadata])
+
+  useEffect(() => {
+    dynamicVariablesRef.current = dynamicVariables
+  }, [dynamicVariables])
+
+  useEffect(() => {
+    agentIdRef.current = agentId
+  }, [agentId])
 
   // Initialize Retell client on mount
   useEffect(() => {
@@ -259,14 +274,17 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
     setError(null)
 
     try {
-      const resolvedAgentId = agentId ?? process.env.NEXT_PUBLIC_RETELL_AGENT_ID
+      const resolvedAgentId = agentIdRef.current ?? process.env.NEXT_PUBLIC_RETELL_AGENT_ID
+      const currentMetadata = metadataRef.current
+      const currentDynamicVariables = dynamicVariablesRef.current
+      console.log("[Retell Hook] Starting call with dynamicVariables:", currentDynamicVariables)
       const response = await fetch("/api/retell/create-call", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agentId: resolvedAgentId,
-          metadata,
-          dynamicVariables,
+          metadata: currentMetadata,
+          dynamicVariables: currentDynamicVariables,
         }),
       })
 
@@ -293,7 +311,7 @@ export function useRetellVoice(options: UseRetellVoiceOptions = {}): UseRetellVo
       setIsConnecting(false)
       onErrorRef.current?.(err instanceof Error ? err : new Error(errorMessage))
     }
-  }, [agentId, metadata, dynamicVariables, isConnecting, isConnected])
+  }, [isConnecting, isConnected])
 
   const endCall = useCallback(() => {
     retellClientRef.current?.stopCall()

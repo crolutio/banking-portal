@@ -664,9 +664,13 @@ export function FloatingChatBubble() {
   const shouldAutoScrollRef = useRef(true)
   const userHasScrolledRef = useRef(false)
 
-  const scrollToBottom = () => {
+  const scrollToBottom = (instant = false) => {
     requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+      if (instant) {
+        messagesEndRef.current?.scrollIntoView({ behavior: "instant", block: "end" })
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
+      }
     })
   }
 
@@ -710,8 +714,11 @@ export function FloatingChatBubble() {
     if ((prevState === "minimized" && chatState !== "minimized") || isTogglingFullscreen) {
       shouldAutoScrollRef.current = true
       userHasScrolledRef.current = false
-      // Scroll immediately without delay so user doesn't see the animation
-      scrollToBottom()
+      // Wait for DOM to render then scroll instantly
+      const timeoutId = setTimeout(() => {
+        scrollToBottom(true)
+      }, 50)
+      return () => clearTimeout(timeoutId)
     }
   }, [chatState])
 

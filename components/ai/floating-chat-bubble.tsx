@@ -584,6 +584,8 @@ export function FloatingChatBubble() {
     messagesRef.current = messages
   }, [messages])
   
+  const conversationHistory = formatVoiceConversationHistory(messages)
+
   const {
     isConnected: isVoiceConnected,
     isConnecting: isVoiceConnecting,
@@ -600,16 +602,16 @@ export function FloatingChatBubble() {
       userId: currentBankingUserId || "",
       customer_id: currentBankingUserId || "",
       profile_id: currentUser?.id || "",
-      conversation_history: formatVoiceConversationHistory(messages),
-      conversationHistory: formatVoiceConversationHistory(messages),
+      conversation_history: conversationHistory,
+      conversationHistory: conversationHistory,
     },
     metadata: {
       userId: currentUser?.id,
       customerId: currentBankingUserId,
       agentId,
       currentPage: pathname,
-      conversationHistory: formatVoiceConversationHistory(messages),
-      conversation_history: formatVoiceConversationHistory(messages),
+      conversationHistory: conversationHistory,
+      conversation_history: conversationHistory,
     },
     onCallStart: (newCallId) => {
       voiceStartIndexRef.current = messagesRef.current.length

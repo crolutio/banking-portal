@@ -11,6 +11,20 @@ export async function POST(request: Request) {
     const body = await request.json()
     const agentId =
       body?.agentId || process.env.RETELL_AGENT_ID || process.env.NEXT_PUBLIC_RETELL_AGENT_ID
+    const dynamicVariables = (body?.dynamicVariables ?? {}) as Record<string, unknown>
+    const metadata = (body?.metadata ?? {}) as Record<string, unknown>
+    const rawHistory =
+      dynamicVariables.conversation_history ??
+      dynamicVariables.conversationHistory ??
+      metadata.conversation_history ??
+      metadata.conversationHistory ??
+      ""
+    const conversationHistory = typeof rawHistory === "string" ? rawHistory : String(rawHistory)
+    const normalizedDynamicVariables = {
+      ...dynamicVariables,
+      conversation_history: conversationHistory,
+      conversationHistory: conversationHistory,
+    }
 
     if (!agentId) {
       return NextResponse.json({ error: "Missing agentId" }, { status: 400 })
@@ -19,8 +33,8 @@ export async function POST(request: Request) {
     const client = new Retell({ apiKey })
     const webCallResponse = await client.call.createWebCall({
       agent_id: agentId,
-      metadata: body?.metadata ?? {},
-      retell_llm_dynamic_variables: body?.dynamicVariables ?? {},
+      metadata,
+      retell_llm_dynamic_variables: normalizedDynamicVariables,
     })
 
     return NextResponse.json({

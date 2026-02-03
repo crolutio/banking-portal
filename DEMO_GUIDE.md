@@ -11,7 +11,25 @@ This guide provides step-by-step instructions for demonstrating the new AI-power
 
 2. **Navigate to** http://localhost:3000
 
-3. **Log in** with any demo user (Sarah Chen, Mohammed Ali, etc.)
+3. **Log in** as Sarah Chen (primary demo user)
+
+---
+
+## 🎙️ Demo 0: Voice Assistant (Retell)
+
+**Scenario**: Show the voice assistant continuing from text history.
+
+### Steps:
+1. **Open the floating chat bubble** and send 2-3 text messages.
+2. **Click the microphone** to start voice mode.
+
+### Expected Result:
+- If there is **no prior chat**, the voice assistant starts with a standard greeting.
+- If there **is** prior chat, the voice assistant continues using the conversation history.
+
+**Notes**:
+- Voice mode currently lives in the **floating chat bubble**.
+- The context tool uses `/api/retell/context` and returns both `conversation_context` and `supabase_context`.
 
 ## 🎯 Demo 1: "The Strategist" - Loan Alternative with Savings
 
@@ -354,7 +372,7 @@ console.log('[Scenario]', scenario.type, scenario.confidence)
 3. Loans exist in database
 
 **Test with Sarah Chen**:
-- User ID: `11111111-1111-1111-1111-111111111111`
+- User ID: `4e140685-8f38-49ff-aae0-d6109c46873d`
 - Has rich transaction history
 - Has existing loans
 - Good test data

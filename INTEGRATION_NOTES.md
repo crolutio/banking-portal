@@ -228,6 +228,25 @@ This ensures:
 - ✅ Real numbers from real transactions
 - ✅ Fast response (calculations ~10ms)
 
+## 🎙️ Voice Assistant (Retell) Integration
+
+**Where it runs**:
+- Floating chat bubble voice mode
+- Support page voice is currently disabled (can be re-enabled with the same context wiring)
+
+**Endpoints**:
+- `/api/retell/create-call` starts the Retell web call
+- `/api/retell/context` returns `conversation_context` + `supabase_context`
+- `/api/retell/webhook` receives call events
+
+**Context behavior**:
+- If there is **no prior text chat**, the agent starts with a standard greeting.
+- If there **is** prior text chat, the conversation history is sent and used as context.
+
+**Payload notes**:
+- The context endpoint accepts `user_message`, `conversation_history`, and `call_id` in multiple shapes
+  (top-level, `args`, `metadata`, or dynamic variables) to work across Retell tool payloads.
+
 ## 🔐 Security & Privacy
 
 ### No New Security Concerns

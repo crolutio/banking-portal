@@ -48,7 +48,7 @@ All features have been successfully implemented and integrated into the banking 
 - ✅ **Updated Chat Interface** (`components/ai/ai-banker-chat-interface.tsx`)
   - Parses `loan-approval` and `optimization` markdown blocks
   - Renders special cards inline with messages
-  - Updated suggested prompts with demo flows
+  - Suggested prompts trimmed to travel + suspicious transactions
   - Maintains all existing functionality
 
 ### Phase 4: API Integration ✅
@@ -71,10 +71,17 @@ All features have been successfully implemented and integrated into the banking 
   - Non-intrusive, optional helper
   - Works on desktop and mobile
 
+### Phase 6: Voice Assistant (Retell) ✅
+- ✅ **Retell Voice Integration**
+  - Floating chat bubble starts Retell web calls
+  - `/api/retell/context` returns `conversation_context` + `supabase_context`
+  - Conversation history passed when switching from text to voice
+
 ### Documentation ✅
 - ✅ **FEATURES_ADDED.md** - Complete feature list with technical details
 - ✅ **INTEGRATION_NOTES.md** - How features integrate with existing system
 - ✅ **DEMO_GUIDE.md** - Step-by-step demo instructions
+ - ✅ **RETELL_VOICE_AGENT_PROMPT.md** - Voice agent system prompt
 
 ---
 

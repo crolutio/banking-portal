@@ -163,10 +163,8 @@ The following features have been added while preserving ALL existing functionali
 **Enhancements**:
 1. **Special Card Parsing**: Detects `loan-approval` and `optimization` markdown blocks
 2. **Updated Suggested Prompts**:
-   - "I want to take a loan for my Japan trip" (Strategist)
-   - "Request a new loan for 50,000 AED" (Pre-Approval)
-   - "Analyze my spending and find savings opportunities"
    - "I'm traveling to London next week" (Concierge)
+   - "Review suspicious transactions"
 
 ## 🔄 5. API Integration with Scenario Detection
 
@@ -219,6 +217,19 @@ if (scenario.type === 'loan_with_travel') {
 - `/investments` - Portfolio analysis
 - `/savings-goals` - Goal acceleration
 - `/rewards` - Points optimization
+
+## 🎙️ 7. Voice Assistant (Retell)
+
+**Location**: Floating chat bubble voice mode
+
+**Endpoints**:
+- `/api/retell/create-call` - starts a Retell web call
+- `/api/retell/context` - returns `conversation_context` + `supabase_context`
+- `/api/retell/webhook` - receives call events
+
+**Behavior**:
+- If there is **no prior text chat**, the assistant starts with a standard greeting.
+- If there **is** prior text chat, the conversation history is sent and used as context.
 
 ## 🎯 7. Demo Flows
 

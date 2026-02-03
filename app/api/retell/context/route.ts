@@ -85,6 +85,21 @@ export async function POST(req: Request) {
       body?.metadata?.currentPage ||
       "/home"
 
+    const debugSummary = {
+      topLevelKeys: Object.keys(body || {}),
+      argsKeys: Object.keys(body?.args || {}),
+      metadataKeys: Object.keys(body?.metadata || {}),
+      dynamicVariablesKeys: Object.keys(body?.dynamic_variables || body?.dynamicVariables || {}),
+      hasUserMessage: Boolean(userMessage),
+      userMessageLength: typeof userMessage === "string" ? userMessage.length : null,
+      hasConversationHistory: Boolean(conversationHistory),
+      conversationHistoryLength:
+        typeof conversationHistory === "string" ? conversationHistory.length : null,
+      callId: callId ?? null,
+      currentPage,
+    }
+    console.log("[retell-context] Payload summary:", JSON.stringify(debugSummary))
+
     const userId = SARAH_VOICE_USER_ID
 
     const accounts = await fetchData("accounts", userId)

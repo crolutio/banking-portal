@@ -599,18 +599,13 @@ export function FloatingChatBubble() {
     dynamicVariables: {
       customer_name: currentUser?.name || "Customer",
       user_id: currentBankingUserId || "",
-      userId: currentBankingUserId || "",
-      customer_id: currentBankingUserId || "",
-      profile_id: currentUser?.id || "",
       conversation_history: conversationHistory,
-      conversationHistory: conversationHistory,
     },
     metadata: {
       userId: currentUser?.id,
       customerId: currentBankingUserId,
       agentId,
       currentPage: pathname,
-      conversationHistory: conversationHistory,
       conversation_history: conversationHistory,
     },
     onCallStart: (newCallId) => {
@@ -759,14 +754,14 @@ export function FloatingChatBubble() {
       >
         <Button
           size="lg"
-          className="h-16 w-16 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-110 hover:shadow-primary/50"
+          className="h-24 w-24 rounded-full shadow-2xl bg-primary hover:bg-primary/90 transition-all duration-300 hover:scale-110 hover:shadow-primary/50"
           onClick={normalizeChat}
         >
-          <MessageSquare className="h-8 w-8 text-white" strokeWidth={2.5} />
+          <MessageSquare className="h-12 w-12 text-white" strokeWidth={2.5} />
         </Button>
         {messages.length > 0 && (
-          <Badge 
-            className="absolute -top-1 -right-1 h-7 w-7 flex items-center justify-center rounded-full bg-primary text-white text-xs font-bold border-2 border-white shadow-lg"
+          <Badge
+            className="absolute -top-1 -right-1 h-10 w-10 flex items-center justify-center rounded-full bg-primary text-white text-sm font-bold border-2 border-white shadow-lg"
           >
             {messages.filter(m => m.role === 'assistant').length}
           </Badge>

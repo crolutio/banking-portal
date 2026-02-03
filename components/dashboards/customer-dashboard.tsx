@@ -190,6 +190,40 @@ export function CustomerDashboard() {
 
   const upcomingPayments = useMemo(() => loans.reduce((sum, l) => sum + l.monthlyPayment, 0), [loans])
 
+  const formatCategoryLabel = (category: string) =>
+    category
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+
+  const topCategoryInsight = useMemo(() => {
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+
+    const spendingTransactions = transactions.filter((t) => {
+      if (t.type !== "debit") return false
+      const txDate = new Date(t.date)
+      return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear
+    })
+
+    const totalsByCategory = spendingTransactions.reduce<Record<string, number>>((acc, tx) => {
+      const category = tx.category || "other"
+      acc[category] = (acc[category] || 0) + Math.abs(tx.amount)
+      return acc
+    }, {})
+
+    const topEntry = Object.entries(totalsByCategory).sort((a, b) => b[1] - a[1])[0]
+    const totalSpending = spendingTransactions.reduce((sum, tx) => sum + Math.abs(tx.amount), 0)
+
+    if (!topEntry || totalSpending <= 0) {
+      return { label: "No Data", percent: 0 }
+    }
+
+    const [topCategory, topAmount] = topEntry
+    const percent = Math.round((topAmount / totalSpending) * 100)
+    return { label: formatCategoryLabel(topCategory), percent }
+  }, [transactions])
+
   const quickActions = [
     { label: "View Accounts", icon: Wallet, href: "/accounts" },
     { label: "Freeze Card", icon: CreditCard, href: "/cards" },
@@ -426,8 +460,10 @@ export function CustomerDashboard() {
                 <TrendingUp className="h-4 w-4 text-emerald-500" />
                 <span className="text-sm font-medium">Top Category</span>
               </div>
-              <p className="text-2xl font-bold">Shopping</p>
-              <p className="text-xs text-muted-foreground">32% of total spending</p>
+              <p className="text-2xl font-bold">{topCategoryInsight.label}</p>
+              <p className="text-xs text-muted-foreground">
+                {topCategoryInsight.percent}% of total spending
+              </p>
             </div>
             <div 
               className="p-4 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors"

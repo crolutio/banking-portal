@@ -27,15 +27,22 @@ function toNumber(value: any) {
 
 function extractUserMessage(body: any): string | null {
   return (
+    body?.user_message ||
     body?.message?.content ||
     body?.transcript ||
     body?.userMessage ||
+    body?.last_user_message ||
     body?.question ||
     body?.query ||
     body?.input ||
     body?.args?.user_message ||
+    body?.args?.userMessage ||
+    body?.args?.last_user_message ||
     body?.args?.question ||
     body?.args?.query ||
+    body?.dynamic_variables?.user_message ||
+    body?.dynamicVariables?.user_message ||
+    body?.metadata?.user_message ||
     null
   )
 }
@@ -47,6 +54,10 @@ function extractConversationHistory(body: any): string | null {
     body?.conversation?.history ||
     body?.args?.conversation_history ||
     body?.args?.conversationHistory ||
+    body?.args?.conversation?.history ||
+    body?.dynamic_variables?.conversation_history ||
+    body?.dynamicVariables?.conversation_history ||
+    body?.metadata?.conversation_history ||
     null
   )
 }
@@ -62,9 +73,17 @@ export async function POST(req: Request) {
       body?.conversation_id ||
       body?.args?.call_id ||
       body?.args?.callId ||
+      body?.metadata?.call_id ||
+      body?.metadata?.callId ||
       null
     const currentPage =
-      body?.currentPage || body?.args?.currentPage || body?.args?.current_page || "/home"
+      body?.current_page ||
+      body?.currentPage ||
+      body?.args?.currentPage ||
+      body?.args?.current_page ||
+      body?.metadata?.current_page ||
+      body?.metadata?.currentPage ||
+      "/home"
 
     const userId = SARAH_VOICE_USER_ID
 

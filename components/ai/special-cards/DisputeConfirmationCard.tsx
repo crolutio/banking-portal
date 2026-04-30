@@ -30,7 +30,7 @@ export function DisputeConfirmationCard({ data }: DisputeConfirmationCardProps) 
 
   return (
     <Card className="my-4 border-2 border-green-500/30 bg-green-500/5 overflow-hidden">
-      <CardHeader className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-b">
+      <CardHeader className="bg-gradient-to-r from-green-500/10 to-primary/10 border-b">
         <div className="flex items-center gap-2">
           <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
             <CheckCircle2 className="h-6 w-6 text-white" />

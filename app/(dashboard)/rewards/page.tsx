@@ -326,7 +326,7 @@ export default function RewardsPage() {
                       <p className="font-medium text-sm">{act.description}</p>
                       <p className="text-xs text-muted-foreground">{new Date(act.createdAt).toLocaleDateString()}</p>
                     </div>
-                    <span className={`font-bold text-sm ${act.amount > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <span className={`font-bold text-sm ${act.amount > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
                       {act.amount > 0 ? '+' : ''}{act.amount}
                     </span>
                   </div>
@@ -345,15 +345,15 @@ export default function RewardsPage() {
             <CardContent>
                <ul className="space-y-3 text-sm">
                  <li className="flex gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                     <span>Refer a friend (+2,000 pts)</span>
                  </li>
                  <li className="flex gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                     <span>Connect Marketplace App (+500 pts)</span>
                  </li>
                  <li className="flex gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
                     <span>Complete Risk Profile (+250 pts)</span>
                  </li>
                </ul>
@@ -384,10 +384,10 @@ export default function RewardsPage() {
                     </div>
 
                     {redeemSuccess ? (
-                        <Alert className="border-emerald-500/50 bg-emerald-500/10">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                            <AlertTitle className="text-emerald-500">Success!</AlertTitle>
-                            <AlertDescription className="text-emerald-600/90">
+                        <Alert className="border-primary/50 bg-primary/10">
+                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                            <AlertTitle className="text-primary">Success!</AlertTitle>
+                            <AlertDescription className="text-primary/90">
                                 Your reward has been redeemed successfully. Check your email for details.
                             </AlertDescription>
                         </Alert>

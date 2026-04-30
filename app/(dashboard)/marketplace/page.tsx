@@ -630,7 +630,7 @@ export default function MarketplacePage() {
 
   const getOfferTypeBadge = (type: AppOffer["type"]) => {
     const styles: Record<string, string> = {
-      cashback: "bg-emerald-500/10 text-emerald-500",
+      cashback: "bg-primary/10 text-primary",
       discount: "bg-blue-500/10 text-blue-500",
       points: "bg-amber-500/10 text-amber-500",
       emi: "bg-purple-500/10 text-purple-500",
@@ -687,7 +687,7 @@ export default function MarketplacePage() {
                 </div>
                 <div className="h-12 w-px bg-border hidden md:block" />
                 <div className="hidden md:block">
-                  <p className="text-3xl font-bold text-emerald-500">
+                  <p className="text-3xl font-bold text-primary">
                     {connectedAppsCount}/{apps.length}
                   </p>
                   <p className="text-xs text-muted-foreground">Apps connected</p>
@@ -894,10 +894,10 @@ export default function MarketplacePage() {
               </SheetHeader>
               <div className="mt-6 px-4 space-y-6">
                 {selectedApp.connected ? (
-                  <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4">
+                  <div className="rounded-lg bg-primary/10 border border-primary/20 p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Check className="h-5 w-5 text-emerald-500" />
-                      <span className="font-medium text-emerald-500">Connected</span>
+                      <Check className="h-5 w-5 text-primary" />
+                      <span className="font-medium text-primary">Connected</span>
                     </div>
                     <p className="text-sm text-muted-foreground">Connected since {selectedApp.connectedDate}</p>
                     {selectedApp.paymentHistory && (
@@ -906,7 +906,7 @@ export default function MarketplacePage() {
                         <Badge
                           variant="outline"
                           className={cn(
-                            selectedApp.paymentHistory === "excellent" && "border-emerald-500 text-emerald-500",
+                            selectedApp.paymentHistory === "excellent" && "border-primary text-primary",
                             selectedApp.paymentHistory === "good" && "border-blue-500 text-blue-500",
                             selectedApp.paymentHistory === "fair" && "border-amber-500 text-amber-500",
                           )}
@@ -1064,7 +1064,7 @@ function AppCard({ app, onConnect, onViewOffers, onViewDetails, recommended }: A
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-semibold text-base truncate">{app.name}</h3>
-              {app.connected && <Check className="h-4 w-4 text-emerald-500 shrink-0" />}
+              {app.connected && <Check className="h-4 w-4 text-primary shrink-0" />}
             </div>
             <p className="text-sm text-muted-foreground line-clamp-2">{app.description}</p>
           </div>

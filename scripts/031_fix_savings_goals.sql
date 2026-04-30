@@ -88,9 +88,9 @@ BEGIN
     -- Sarah's Goals
     IF acc_sarah IS NOT NULL THEN
         INSERT INTO savings_goals (user_id, name, category, target_amount, current_amount, monthly_contribution, target_date, status, source_account_id, auto_debit, image_url) VALUES
-        (u_sarah, 'Maldives Vacation', 'travel', 25000.00, 18500.00, 2000.00, '2025-06-01', 'active', acc_sarah, true, '/maldives-beach-resort-tropical-paradise.jpg'),
-        (u_sarah, 'MacBook Pro', 'shopping', 12000.00, 8400.00, 1200.00, '2025-03-01', 'active', acc_sarah, true, '/macbook-pro-laptop-sleek-modern.jpg'),
-        (u_sarah, 'Emergency Fund', 'emergency', 50000.00, 35000.00, 2500.00, '2025-12-31', 'active', acc_sarah, true, '/safety-umbrella-protection-financial-security.jpg');
+        (u_sarah, 'Maldives Vacation', 'travel', 25000.00, 18500.00, 2000.00, '2025-06-01', 'active', acc_sarah, true, '/japan.jpg'),
+        (u_sarah, 'MacBook Pro', 'shopping', 12000.00, 8400.00, 1200.00, '2025-03-01', 'active', acc_sarah, true, '/macbook-pro.jpg'),
+        (u_sarah, 'Emergency Fund', 'emergency', 50000.00, 35000.00, 2500.00, '2025-12-31', 'active', acc_sarah, true, '/emergency.webp');
     END IF;
 
     -- Mohammed's Goals
@@ -117,7 +117,7 @@ BEGIN
     -- Fatima's Goals
     IF acc_fatima IS NOT NULL THEN
         INSERT INTO savings_goals (user_id, name, category, target_amount, current_amount, monthly_contribution, target_date, status, source_account_id, auto_debit, image_url) VALUES
-        (u_fatima, 'Wedding Fund', 'wedding', 80000.00, 42000.00, 4000.00, '2025-10-01', 'active', acc_fatima, true, '/wedding-celebration-rings-romantic.jpg'),
+        (u_fatima, 'Wedding Fund', 'wedding', 80000.00, 42000.00, 4000.00, '2025-10-01', 'active', acc_fatima, true, '/wedding.jpg'),
         (u_fatima, 'Education Course', 'education', 20000.00, 8000.00, 2000.00, '2025-06-01', 'active', acc_fatima, true, '/placeholder.svg?height=200&width=300');
     END IF;
 

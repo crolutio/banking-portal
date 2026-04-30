@@ -53,6 +53,7 @@ import { CitationBadge } from "@/components/ai/citation-badge"
 import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 import { useRole } from "@/lib/role-context"
 import { createClient } from "@/lib/supabase/client"
+import { resolveSavingsGoalImageUrl } from "@/lib/savings-goal-images"
 
 const categoryIcons: Record<SavingsGoalCategory, React.ElementType> = {
   travel: Plane,
@@ -70,7 +71,7 @@ const categoryColors: Record<SavingsGoalCategory, string> = {
   travel: "bg-blue-500/10 text-blue-500 border-blue-500/20",
   shopping: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   home: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-  education: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  education: "bg-primary/10 text-primary border-primary/20",
   emergency: "bg-red-500/10 text-red-500 border-red-500/20",
   vehicle: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
   wedding: "bg-pink-500/10 text-pink-500 border-pink-500/20",
@@ -123,11 +124,15 @@ function GoalCard({ goal, onAction }: { goal: SavingsGoal; onAction: (action: st
 
   return (
     <Card className="overflow-hidden group hover:shadow-lg transition-all duration-300">
-      <div className="relative h-32 overflow-hidden">
+      <div className="relative aspect-video w-full overflow-hidden">
         <Image
-          src={goal.image || "/placeholder.svg?height=200&width=400&query=savings goal finance"}
+          src={
+            resolveSavingsGoalImageUrl(goal.name, goal.category, goal.image) ||
+            "/placeholder.svg?height=360&width=640&query=savings goal finance"
+          }
           alt={goal.name}
           fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           className="object-cover group-hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
@@ -139,7 +144,7 @@ function GoalCard({ goal, onAction }: { goal: SavingsGoal; onAction: (action: st
         </div>
         <div className="absolute top-3 right-3">
           {goal.status === "completed" ? (
-            <Badge className="bg-emerald-500 text-white">
+            <Badge className="bg-primary text-primary-foreground">
               <Check className="h-3 w-3 mr-1" />
               Completed
             </Badge>
@@ -149,7 +154,7 @@ function GoalCard({ goal, onAction }: { goal: SavingsGoal; onAction: (action: st
               Paused
             </Badge>
           ) : isOnTrack ? (
-            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+            <Badge className="bg-primary/20 text-primary border-primary/30">
               <TrendingUp className="h-3 w-3 mr-1" />
               On Track
             </Badge>
@@ -734,7 +739,7 @@ export default function SavingsGoalsPage() {
         sourceAccountId: g.source_account_id,
         status: g.status,
         createdAt: g.created_at,
-        image: g.image_url
+        image: resolveSavingsGoalImageUrl(g.name, g.category, g.image_url),
       }))
       
       setSavingsGoals(mappedGoals)
@@ -922,8 +927,8 @@ export default function SavingsGoalsPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-emerald-500/10">
-                    <Wallet className="h-5 w-5 text-emerald-500" />
+                  <div className="p-2.5 rounded-lg bg-primary/10">
+                    <Wallet className="h-5 w-5 text-primary" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Monthly Savings</p>

@@ -79,7 +79,7 @@ export function maskPII(text: string, type: "email" | "phone" | "name" | "accoun
 
 export function getCategoryColor(category: string): string {
   const colors: Record<string, string> = {
-    groceries: "bg-emerald-500/20 text-emerald-400",
+    groceries: "bg-primary/15 text-primary",
     restaurants: "bg-orange-500/20 text-orange-400",
     shopping: "bg-pink-500/20 text-pink-400",
     entertainment: "bg-purple-500/20 text-purple-400",
@@ -108,14 +108,14 @@ export function getSeverityColor(severity: string): string {
 
 export function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    active: "bg-emerald-500/20 text-emerald-400",
+    active: "bg-success/20 text-success",
     open: "bg-yellow-500/20 text-yellow-400",
     investigating: "bg-blue-500/20 text-blue-400",
-    resolved: "bg-emerald-500/20 text-emerald-400",
+    resolved: "bg-success/20 text-success",
     escalated: "bg-red-500/20 text-red-400",
     closed: "bg-gray-500/20 text-gray-400",
     pending: "bg-yellow-500/20 text-yellow-400",
-    completed: "bg-emerald-500/20 text-emerald-400",
+    completed: "bg-success/20 text-success",
     failed: "bg-red-500/20 text-red-400",
     frozen: "bg-blue-500/20 text-blue-400",
   }

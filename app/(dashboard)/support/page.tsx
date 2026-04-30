@@ -48,11 +48,12 @@ import {
   UserPlus,
 } from "lucide-react"
 import type { DbConversation, DbMessage } from "@/lib/types"
+import { normalizeChatMessageDisplayText } from "@/lib/chat-message-format"
 import { useCustomerConversations } from "@/lib/hooks/useCustomerConversations"
 import { useConversationMessages } from "@/lib/hooks/useConversationMessages"
 import { createConversation, requestConversationHandover, sendAiMessage } from "@/lib/supportApi"
 
-const CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d"]
+const CHART_COLORS = ["#0088FE", "#e10801", "#FFBB28", "#FF8042", "#8884d8", "#64748b"]
 
 
 export default function SupportPage() {
@@ -414,7 +415,7 @@ export default function SupportPage() {
   }
 
   const renderTextWithTables = (text: string) => {
-    const lines = text.split("\n")
+    const lines = normalizeChatMessageDisplayText(text).split("\n")
     const blocks: Array<{ type: "text" | "table"; lines: string[] }> = []
     let current: { type: "text" | "table"; lines: string[] } | null = null
 

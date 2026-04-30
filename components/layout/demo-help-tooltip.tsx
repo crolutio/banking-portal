@@ -30,6 +30,11 @@ const demoTips: Record<string, DemoTip> = {
         prompt: "Review suspicious transactions",
         agentId: "banker",
         description: "Nobu London verification flow"
+      },
+      {
+        prompt: "Review this transaction: Nobu London for 6200 on 2026-01-15",
+        agentId: "banker",
+        description: "Asks 'Was this you?' Reply yes/no to trigger follow-up actions"
       }
     ]
   },
@@ -40,6 +45,16 @@ const demoTips: Record<string, DemoTip> = {
         prompt: "I want to take a loan for my Japan trip",
         agentId: "spending_analyst",
         description: "🎯 The Strategist - Finds savings instead of loan"
+      },
+      {
+        prompt: "I want to apply for a 50000 AED loan",
+        agentId: "loan_advisor",
+        description: "Pre-approval assessment with loan approval card"
+      },
+      {
+        prompt: "Simulate the payment schedule for a loan of AED 50,000 at 5.99% APR over 24 months",
+        agentId: "loan_advisor",
+        description: "Amortization table with principal and interest"
       }
     ]
   },
@@ -50,6 +65,16 @@ const demoTips: Record<string, DemoTip> = {
         prompt: "I think my virtual card is compromised",
         agentId: "banker",
         description: "Cancel, reissue, and secure subscriptions"
+      },
+      {
+        prompt: "I didn't authorize the Apple US Store transaction; please dispute it",
+        agentId: "banker",
+        description: "Starts dispute case and shows confirmation card"
+      },
+      {
+        prompt: "I'm traveling to London next week",
+        agentId: "banker",
+        description: "Travel card, fees, and currency advice"
       }
     ]
   },
@@ -60,6 +85,16 @@ const demoTips: Record<string, DemoTip> = {
         prompt: "Auto-boost my Japan trip goal without changing my lifestyle",
         agentId: "savings_coach",
         description: "Subscriptions + round-ups + payday sweep"
+      },
+      {
+        prompt: "Analyze my spending and find savings opportunities",
+        agentId: "spending_analyst",
+        description: "Savings optimization card and recommendations"
+      },
+      {
+        prompt: "How can I avoid an overdraft this month?",
+        agentId: "banker",
+        description: "Overdraft prevention action demo"
       }
     ]
   },

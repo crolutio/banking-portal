@@ -48,7 +48,6 @@ import {
   Gift,
   Sun,
   Moon,
-  Monitor,
   X,
   Plus,
   Minus,
@@ -89,61 +88,27 @@ function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Button variant="ghost" size="icon" className="h-9 w-9">
-        <Monitor className="h-4 w-4" />
+      <Button variant="ghost" size="icon" className="h-9 w-9" disabled>
+        <Sun className="h-4 w-4" />
+        <span className="sr-only">Theme</span>
       </Button>
     )
   }
 
-  const getIcon = () => {
-    if (theme === "dark") return <Moon className="h-4 w-4" />
-    if (theme === "light") return <Sun className="h-4 w-4" />
-    return <Monitor className="h-4 w-4" />
-  }
-
-  const getLabel = () => {
-    if (theme === "dark") return "Dark"
-    if (theme === "light") return "Light"
-    return "System"
-  }
+  const isDark = theme === "dark"
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9">
-          {getIcon()}
-          <span className="sr-only">Toggle theme</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Theme</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem 
-          onClick={() => setTheme("light")} 
-          className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-        >
-          <Sun className="h-4 w-4" />
-          <span>Light</span>
-          {theme === "light" && <Check className="h-4 w-4 ml-auto text-primary" />}
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => setTheme("dark")} 
-          className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-        >
-          <Moon className="h-4 w-4" />
-          <span>Dark</span>
-          {theme === "dark" && <Check className="h-4 w-4 ml-auto text-primary" />}
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={() => setTheme("system")} 
-          className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-        >
-          <Monitor className="h-4 w-4" />
-          <span>System</span>
-          {theme === "system" && <Check className="h-4 w-4 ml-auto text-primary" />}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="h-9 w-9"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+      <span className="sr-only">{isDark ? "Switch to light mode" : "Switch to dark mode"}</span>
+    </Button>
   )
 }
 
@@ -212,7 +177,7 @@ function NotificationBell() {
                       Review
                     </Button>
                     {reviewed && (
-                      <span className="text-xs text-emerald-600">Reviewed</span>
+                      <span className="text-xs text-primary">Reviewed</span>
                     )}
                   </div>
                   <Dialog
@@ -319,27 +284,17 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
     return false
   })
 
-  const { theme, resolvedTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-  
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // Determine which logo to show - use resolvedTheme to handle system theme
-  const isDark = mounted ? (resolvedTheme === "dark") : false
-  const logoSrc = isDark ? "/aideology-logo.png" : "/aideology-logo-light.png"
-
   return (
     <aside className={cn("flex flex-col bg-sidebar text-sidebar-foreground", className)}>
       <div className="relative flex items-center justify-center px-4 min-h-[120px] border-b border-sidebar-border">
         <div className="flex items-center justify-center py-8">
           <Image 
-            src={logoSrc}
-            alt="Aideology" 
-            width={288} 
-            height={288}
+            src="/etisalat-dark.png"
+            alt="Etisalat" 
+            width={280}
+            height={84}
             className="object-contain"
+            priority
           />
         </div>
         {onClose && (
@@ -380,7 +335,7 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
 
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-2 text-xs text-sidebar-muted">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           <span>AI Systems Online</span>
         </div>
       </div>
@@ -430,6 +385,18 @@ function Topbar() {
         </Sheet>
 
         <div className="hidden lg:flex items-center gap-4 flex-1">
+          <div className="flex-1 flex justify-center">
+            <DemoHelpTooltip />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="lg:hidden">
+          <DemoHelpTooltip />
+        </div>
+        <NotificationBell />
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
@@ -456,17 +423,7 @@ function Topbar() {
           >
             <Plus className="h-4 w-4" />
           </Button>
-          <div className="flex-1 flex justify-center">
-            <DemoHelpTooltip />
-          </div>
         </div>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <div className="lg:hidden">
-          <DemoHelpTooltip />
-        </div>
-        <NotificationBell />
         <ThemeToggle />
         <RoleSwitcher />
       </div>

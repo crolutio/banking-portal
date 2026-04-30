@@ -71,7 +71,7 @@ const categoryConfig: Record<string, any> = {
     icon: Home,
     description: "Residential, Commercial Properties & REITs",
     dbTypes: ["real_estate"], // REITs are stocks in DB, so this might be empty for now unless we change DB
-    color: "text-emerald-500 bg-emerald-500/10",
+    color: "text-primary bg-primary/10",
     opportunities: [
       { name: "London Commercial REIT", return: "+5.5% Yield", risk: "Medium", min: "$1,000" },
       { name: "Dubai Residential Fund", return: "+7.2% Yield", risk: "Medium", min: "$25,000" },
@@ -264,7 +264,7 @@ export default function InvestmentCategoryPage() {
                     <CardDescription>
                         Total Value: <span className="font-bold text-foreground">{formatCurrency(totalValue, "USD")}</span>
                         {holdings.length > 0 && (
-                            <span className={`ml-3 ${totalGain >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            <span className={`ml-3 ${totalGain >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
                                 {totalGain >= 0 ? '+' : ''}{formatCurrency(totalGain, "USD")}
                             </span>
                         )}
@@ -292,7 +292,7 @@ export default function InvestmentCategoryPage() {
                                     </div>
                                     <div className="text-right">
                                         <p className="font-medium">{formatCurrency(h.value, "USD")}</p>
-                                        <p className={`text-xs ${h.gain >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                        <p className={`text-xs ${h.gain >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
                                             {h.gain >= 0 ? '+' : ''}{h.gainPercent.toFixed(2)}%
                                         </p>
                                     </div>
@@ -320,7 +320,7 @@ export default function InvestmentCategoryPage() {
                                     <Badge variant="outline">{opp.risk}</Badge>
                                 </div>
                                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                    <span className="text-emerald-600 font-medium">{opp.return}</span>
+                                    <span className="text-green-600 dark:text-green-400 font-medium">{opp.return}</span>
                                     <span>Min: {opp.min}</span>
                                 </div>
                                 <Button size="sm" variant="secondary" className="w-full mt-3">View Details</Button>
@@ -399,7 +399,7 @@ export default function InvestmentCategoryPage() {
                   </div>
                   <div className="p-3 rounded-lg bg-muted/40">
                     <p className="text-muted-foreground text-xs">Unrealized P/L</p>
-                    <p className={`text-base font-semibold ${selectedHolding.gain >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                    <p className={`text-base font-semibold ${selectedHolding.gain >= 0 ? "text-green-600 dark:text-green-400" : "text-red-500"}`}>
                       {selectedHolding.gain >= 0 ? "+" : ""}
                       {formatCurrency(selectedHolding.gain, "USD")} ({selectedHolding.gainPercent.toFixed(2)}%)
                     </p>

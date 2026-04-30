@@ -183,7 +183,7 @@ function TransactionsTable({
           <div className="flex gap-4 p-4 bg-muted/30 rounded-lg">
             <div>
               <p className="text-xs text-muted-foreground">Total Income</p>
-              <p className="text-lg font-bold text-emerald-500">+{formatCurrency(totalIncome)}</p>
+              <p className="text-lg font-bold text-green-600 dark:text-green-400">+{formatCurrency(totalIncome)}</p>
             </div>
             <div className="h-full w-px bg-border" />
             <div>
@@ -218,11 +218,11 @@ function TransactionsTable({
                     <div className="flex items-center gap-3">
                       <div
                         className={`flex items-center justify-center w-8 h-8 rounded-full shrink-0 ${
-                          txn.type === "credit" ? "bg-emerald-500/20" : "bg-muted"
+                          txn.type === "credit" ? "bg-green-500/15" : "bg-muted"
                         }`}
                       >
                         {txn.type === "credit" ? (
-                          <ArrowDownRight className="h-4 w-4 text-emerald-500" />
+                          <ArrowDownRight className="h-4 w-4 text-green-600 dark:text-green-400" />
                         ) : (
                           <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
                         )}
@@ -262,7 +262,7 @@ function TransactionsTable({
                   </td>
                   <td
                     className={`px-4 py-3 text-sm font-medium text-right ${
-                      txn.type === "credit" ? "text-emerald-500" : "text-foreground"
+                      txn.type === "credit" ? "text-green-600 dark:text-green-400" : "text-foreground"
                     }`}
                   >
                     <div className="flex items-center justify-end gap-2">
@@ -797,7 +797,7 @@ export default function AccountsPage() {
                   }
                 }}
               >
-                <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <ArrowTrendingIcon tone={insight.tone} />
                 </div>
                 <div className="flex-1 space-y-1">

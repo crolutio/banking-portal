@@ -986,7 +986,7 @@ export const savingsGoals: SavingsGoal[] = [
     sourceAccountId: "acc_1",
     status: "active",
     createdAt: "2024-08-01",
-    image: "/maldives-beach-resort-tropical-paradise.jpg",
+    image: "/japan.jpg",
   },
   {
     id: "goal_2",
@@ -1002,7 +1002,7 @@ export const savingsGoals: SavingsGoal[] = [
     sourceAccountId: "acc_1",
     status: "active",
     createdAt: "2024-09-15",
-    image: "/macbook-pro-laptop-sleek-modern.jpg",
+    image: "/macbook-pro.jpg",
   },
   {
     id: "goal_3",
@@ -1018,7 +1018,7 @@ export const savingsGoals: SavingsGoal[] = [
     sourceAccountId: "acc_2",
     status: "active",
     createdAt: "2024-01-01",
-    image: "/safety-umbrella-protection-financial-security.jpg",
+    image: "/emergency.webp",
   },
   {
     id: "goal_4",
@@ -1066,7 +1066,7 @@ export const savingsGoals: SavingsGoal[] = [
     sourceAccountId: "acc_2",
     status: "active",
     createdAt: "2024-06-01",
-    image: "/wedding-celebration-rings-romantic.jpg",
+    image: "/wedding.jpg",
   },
 ]
 

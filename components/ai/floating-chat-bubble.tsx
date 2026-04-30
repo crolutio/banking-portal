@@ -35,8 +35,9 @@ import Image from "next/image"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useTheme } from "next-themes"
 import { Card } from "@/components/ui/card"
+import { normalizeChatMessageDisplayText } from "@/lib/chat-message-format"
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d']
+const COLORS = ['#0088FE', '#e10801', '#FFBB28', '#FF8042', '#8884d8', '#64748b']
 
 const ChartRenderer = ({ data }: { data: any }) => {
   const { theme } = useTheme()
@@ -115,9 +116,10 @@ const ChartRenderer = ({ data }: { data: any }) => {
 }
 
 const FormattedText = ({ text }: { text: string }) => {
+  const normalized = normalizeChatMessageDisplayText(text)
   // Enhanced regex to handle category:value patterns, numbered lists, and markdown
   // Split by markdown patterns, newlines, and numbered lists
-  const parts = text.split(/(\*\*.*?\*\*|\n|\*\s|\d+\.\s|([A-Z][a-zA-Z\s]+):\s*\d+)/g)
+  const parts = normalized.split(/(\*\*.*?\*\*|\n|\*\s|\d+\.\s|([A-Z][a-zA-Z\s]+):\s*\d+)/g)
   return (
     <span className="whitespace-pre-wrap break-words">
       {parts.map((part, i) => {
@@ -557,7 +559,6 @@ function formatVoiceConversationHistory(messages: Message[]) {
 export function FloatingChatBubble() {
   const pathname = usePathname()
   const { currentUser, currentBankingUserId } = useRole()
-  const { theme } = useTheme()
   const { chatState, agentId, initialMessage, closeChat, minimizeChat, normalizeChat, toggleFullscreen } = useFloatingChat()
   const persona = AI_AGENT_PERSONAS[agentId] ?? AI_AGENT_PERSONAS.banker
   const retellAgentId = process.env.NEXT_PUBLIC_RETELL_AGENT_ID
@@ -568,6 +569,8 @@ export function FloatingChatBubble() {
   const { messages, input, handleInputChange, handleSubmit, isLoading, append, stop, setMessages } = useChat({
     api: "/api/chat",
     id: `floating-chat-${agentId}`, // Stable ID for persistence across pages
+    // AI SDK data stream (revisionId per chunk) so SWR/useChat updates incrementally
+    streamProtocol: "data",
     body: {
       userId: currentUser?.id,
       agentId,
@@ -825,17 +828,17 @@ export function FloatingChatBubble() {
       <div 
         className={cn("flex items-center justify-between px-4 py-3 border-b bg-primary/5", isFullscreen ? "rounded-t-2xl" : "rounded-t-2xl")}
       >
-        <div className="flex items-center gap-3">
-          <Image
-            src={theme === "light" ? "/aideology-head-white.webp" : "/aideology-head.png"}
-            alt="Aideology"
-            width={40}
-            height={40}
-            className="object-contain"
-          />
-          <div>
-            <h3 className="text-sm font-semibold">{persona.title}</h3>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <div className="relative h-9 w-[118px] shrink-0">
+            <Image
+              src="/etisalat-dark.png"
+              alt="Etisalat"
+              fill
+              sizes="120px"
+              className="object-contain object-left"
+            />
           </div>
+          <h3 className="text-sm font-semibold leading-tight truncate pl-0.5">{persona.title}</h3>
         </div>
         
         <div className="flex items-center gap-1">
@@ -947,7 +950,7 @@ export function FloatingChatBubble() {
             <div className="flex items-center gap-2">
               <div className={cn(
                 "w-2.5 h-2.5 rounded-full",
-                isSpeaking ? "bg-yellow-500 animate-pulse" : "bg-green-500"
+                isSpeaking ? "bg-yellow-500 animate-pulse" : "bg-primary"
               )} />
               <span className="text-sm font-medium">
                 {isSpeaking ? "AI is speaking..." : "Listening to you..."}

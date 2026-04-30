@@ -90,7 +90,7 @@ interface ConfidenceIndicatorProps {
 
 export function ConfidenceIndicator({ confidence, className }: ConfidenceIndicatorProps) {
   const colors = {
-    high: "bg-emerald-500",
+    high: "bg-primary",
     medium: "bg-yellow-500",
     low: "bg-orange-500",
   }

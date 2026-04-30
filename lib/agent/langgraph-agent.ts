@@ -7,6 +7,7 @@ import {
   analyzeLoanPreapprovalForUser,
 } from "./tools"
 import { createDirectClient } from "@/lib/supabase/direct-client"
+import { normalizeChatMessageDisplayText } from "@/lib/chat-message-format"
 
 // Helper to safely fetch data from any Supabase table
 async function fetchData(table: string, userId: string, column = "user_id") {
@@ -292,7 +293,7 @@ async function planNode(state: AgentState): Promise<Partial<AgentState>> {
   }
 
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "")
-  const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
+  const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" })
 
   // Tell agent that data is already loaded (no need to fetch again!)
   const dataContext = state.allData 
@@ -407,7 +408,7 @@ function shouldContinueNode(state: any): "continue" | "answer" {
 // Answer synthesis node: Generate final answer
 async function answerNode(state: AgentState): Promise<Partial<AgentState>> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY || "")
-  const model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
 
   // Build data context
   let dataContext = ""
@@ -472,6 +473,8 @@ GUIDELINES:
 - Current Date: ${new Date().toISOString().split('T')[0]}
 - Be professional but friendly.
 - You can use markdown formatting, bullet points, and code blocks for better readability.
+- When using a numbered list, each item MUST start on its own line as "1. ", "2. ", "3. ". Never write "1I", "1Item", or repeat the lead-in sentence as item 1.
+- Put a blank line before the first numbered list item.
 `
 
     const shortPrompt = `
@@ -511,7 +514,10 @@ GUIDELINES:
         ? shortResult.response.text()
         : shortResult.response.text || "I couldn't generate a response."
       
-      return { answer: longAnswer, shortAnswer }
+      return {
+        answer: normalizeChatMessageDisplayText(longAnswer),
+        shortAnswer: normalizeChatMessageDisplayText(shortAnswer),
+      }
     } catch (error) {
       console.error("[LangGraph] Hybrid answer generation failed:", error)
       return { 
@@ -546,6 +552,7 @@ ${state.isVoice ? "- Provide a SHORT, concise answer (1-3 sentences maximum) for
 - Current Date: ${new Date().toISOString().split('T')[0]}
 - Be professional but friendly.
 - DO NOT include markdown, bullet points, or code blocks. Plain text sentences only.
+- If you include numbered steps, each item MUST start with "1. ", "2. ", "3. ". Never write "1I" or "1Item".
 `
 
   try {
@@ -555,7 +562,7 @@ ${state.isVoice ? "- Provide a SHORT, concise answer (1-3 sentences maximum) for
     const answer = typeof result.response.text === 'function'
       ? result.response.text()
       : result.response.text || "I couldn't generate a response."
-    return { answer }
+    return { answer: normalizeChatMessageDisplayText(answer) }
   } catch (error) {
     console.error("[LangGraph] Answer generation failed:", error)
     return { answer: "I'm sorry, I couldn't generate a response at this time. Please try again." }

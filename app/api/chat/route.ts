@@ -1,5 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai"
-import { GoogleGenerativeAIStream, StreamingTextResponse } from "ai"
+import { createDataStreamResponse } from "ai"
+import { formatDataStreamPart } from "@ai-sdk/ui-utils"
+import { iterateGeminiTextDeltas } from "@/lib/gemini-stream-response"
 import { createDirectClient } from "@/lib/supabase/direct-client"
 import { getAgentPersona } from "@/lib/ai/agents"
 import { generateForecasts } from "@/lib/forecasting/simple-forecast"
@@ -8,9 +10,17 @@ import { detectScenario } from "@/lib/agent/scenario-detector"
 import { analyzeLoanPreApproval } from "@/lib/calculations/loan-preapproval"
 import { analyzeSpendingOptimization } from "@/lib/calculations/spending-optimizer"
 import { runLangGraphAgent } from "@/lib/agent/langgraph-agent"
+import { normalizeChatMessageDisplayText } from "@/lib/chat-message-format"
 
 // Set the runtime to nodejs for better compatibility
 export const runtime = "nodejs"
+
+export const dynamic = "force-dynamic"
+
+const CHAT_STREAM_HEADERS = {
+  "Cache-Control": "no-store, no-transform",
+  "X-Accel-Buffering": "no",
+} as const
 
 // Helper to provide page-specific context
 function getPageSpecificContext(page: string): string {
@@ -74,9 +84,8 @@ export async function POST(req: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY)
-    
-    // Model fallback: gemma-3-27b-it -> gemma-3-12b-it
-    let model = genAI.getGenerativeModel({ model: "gemma-3-27b-it" })
+
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" })
 
     // Default to Sarah Chen for demo if no user provided
     const userId = requestedUserId || "4e140685-8f38-49ff-aae0-d6109c46873d"
@@ -537,9 +546,9 @@ SPECIAL SCENARIO DETECTED: User confirmed the transaction was legitimate.
 
 INSTRUCTION:
 Confirm the charge is approved, then mention three actions completed:
-1) Switched the charge to a card with no foreign transaction fees.
-2) Processed the transaction successfully.
-3) Switched the card/account currency to GBP for the trip to avoid foreign interest/fees.
+1. Switched the charge to a card with no foreign transaction fees.
+2. Processed the transaction successfully.
+3. Switched the card/account currency to GBP for the trip to avoid foreign interest/fees.
 
 Reference the transaction by name: ${reviewedTx}. Keep the response short and confident.`
       }
@@ -551,9 +560,9 @@ SPECIAL SCENARIO DETECTED: User denied the transaction.
 
 INSTRUCTION:
 Confirm three actions completed immediately:
-1) Card blocked to prevent further charges.
-2) Temporary digital card created so the customer can still access funds.
-3) Dispute opened automatically for the transaction.
+1. Card blocked to prevent further charges.
+2. Temporary digital card created so the customer can still access funds.
+3. Dispute opened automatically for the transaction.
 
 Reference the transaction by name: ${reviewedTx}. Keep the response reassuring and action-oriented.`
       }
@@ -567,9 +576,11 @@ SPECIAL SCENARIO DETECTED: Virtual card compromised.
 
 INSTRUCTION:
 Confirm three actions completed immediately:
-1) Cancelled the compromised virtual card.
-2) Issued a new virtual card with a fresh number.
-3) Migrated active subscriptions to the new virtual card and enabled real-time alerts.
+Use this exact structure, with each step on its own line and no repeated lead-in:
+
+1. Cancelled the compromised virtual card.
+2. Issued a new virtual card with a fresh number.
+3. Migrated active subscriptions to the new virtual card and enabled real-time alerts.
 
 Message tone: Calm, decisive, reassuring.`
     }
@@ -611,9 +622,9 @@ SPECIAL SCENARIO DETECTED: Market shock protection activated.
 
 INSTRUCTION:
 Explain three automated actions:
-1) Shifted 12% of the portfolio into low-volatility ETFs.
-2) Added a temporary hedge to reduce drawdown risk.
-3) Scheduled an automatic review in 7 days and will unwind the hedge when volatility normalizes.
+1. Shifted 12% of the portfolio into low-volatility ETFs.
+2. Added a temporary hedge to reduce drawdown risk.
+3. Scheduled an automatic review in 7 days and will unwind the hedge when volatility normalizes.
 Message tone: Confident, professional, risk-aware.`
     }
 
@@ -626,9 +637,9 @@ SPECIAL SCENARIO DETECTED: Japan trip goal acceleration.
 INSTRUCTION:
 Explain that the goal was accelerated by 4 weeks without lifestyle changes.
 Mention three actions:
-1) Reallocated unused subscriptions and round-ups into the goal.
-2) Set an 8% payday sweep into the goal.
-3) Auto-pauses the sweep if cashflow dips.
+1. Reallocated unused subscriptions and round-ups into the goal.
+2. Set an 8% payday sweep into the goal.
+3. Auto-pauses the sweep if cashflow dips.
 Message tone: Encouraging, proactive, efficient.`
     }
 
@@ -708,6 +719,8 @@ GUIDELINES:
 FORMATTING RULES:
 - Use **bold** for emphasis and headings.
 - Use lists for multiple items.
+- When using a numbered list, each item MUST start on its own line as "1. ", "2. ", "3. ". Never write "1I", "1Item", or repeat the lead-in sentence as item 1.
+- Put a blank line before the first numbered list item.
 - You can generate CHARTS to visualize data.
 - To create a chart, output a code block with the language "chart" containing a JSON object.
 - Supported chart types: "bar", "pie".
@@ -755,7 +768,7 @@ RESPONSE STYLE:
     ]
 
     // Start chat with history
-    let chat = model.startChat({
+    const chat = model.startChat({
       history: geminiMessages.slice(0, -1), // All but last message
     })
 
@@ -798,28 +811,19 @@ RESPONSE STYLE:
             })
         }
         
-        const sanitizedLongAnswer = sanitizeText(longAnswer)
-        const sanitizedShortAnswer = sanitizeText(shortAnswer)
-        
-        const encoder = new TextEncoder()
-        const stream = new ReadableStream({
-          async start(controller) {
-            try {
-              // Stream the long answer
-              controller.enqueue(encoder.encode(sanitizedLongAnswer))
-              // Append short answer with special marker
-              controller.enqueue(encoder.encode(`\n\n<!--VOICE_SUMMARY:${sanitizedShortAnswer}-->`))
-              controller.close()
-            } catch (error) {
-              console.error("[Chat] Stream encoding error:", error)
-              controller.error(error)
-            }
-          },
-        })
-        
-        return new StreamingTextResponse(stream, {
+        const sanitizedLongAnswer = sanitizeText(normalizeChatMessageDisplayText(longAnswer))
+        const sanitizedShortAnswer = sanitizeText(normalizeChatMessageDisplayText(shortAnswer))
+        const hybridBody =
+          sanitizedLongAnswer + `\n\n<!--VOICE_SUMMARY:${sanitizedShortAnswer}-->`
+
+        return createDataStreamResponse({
           headers: {
-            'X-Voice-Summary': shortAnswer,
+            ...CHAT_STREAM_HEADERS,
+            "X-Voice-Summary": shortAnswer,
+          },
+          async execute(writer) {
+            writer.write(formatDataStreamPart("text", hybridBody))
+            writer.write(formatDataStreamPart("finish_message", { finishReason: "stop" }))
           },
         })
       } catch (error: any) {
@@ -830,45 +834,20 @@ RESPONSE STYLE:
     
     if (!stream) {
       const result = await chat.sendMessage(lastMessage)
-      const text = result.response.text()
+      const text = normalizeChatMessageDisplayText(result.response.text())
       return new Response(text, { status: 200 })
     }
 
-    // Try primary model first, fallback to secondary on rate limit
-    try {
-      const result = await chat.sendMessageStream(lastMessage)
-      const stream = GoogleGenerativeAIStream(result)
-      return new StreamingTextResponse(stream)
-    } catch (error: any) {
-      const errorMessage = String(error?.message || '').toLowerCase()
-      const errorStatus = error?.status || error?.statusCode || 0
-      const errorCode = String(error?.code || '').toLowerCase()
-      
-      const isRateLimit = errorStatus === 429 || 
-                         errorStatus === 500 ||
-                         errorMessage.includes('rate limit') ||
-                         errorMessage.includes('quota') ||
-                         errorMessage.includes('resource exhausted') ||
-                         errorMessage.includes('per minute') ||
-                         errorMessage.includes('too many requests') ||
-                         errorCode.includes('rate_limit') ||
-                         errorCode.includes('resource_exhausted')
-      
-      // If it's a rate limit, try the fallback model
-      if (isRateLimit) {
-        console.log(`[AI Chat] Rate limit on gemma-3-27b-it, trying fallback: gemma-3-12b-it`)
-        model = genAI.getGenerativeModel({ model: "gemma-3-12b-it" })
-        chat = model.startChat({
-          history: geminiMessages.slice(0, -1),
-        })
-        const result = await chat.sendMessageStream(lastMessage)
-        const stream = GoogleGenerativeAIStream(result)
-        return new StreamingTextResponse(stream)
-      }
-      
-      // If not a rate limit, throw the error
-      throw error
-    }
+    const streamResult = await chat.sendMessageStream(lastMessage)
+    return createDataStreamResponse({
+      headers: CHAT_STREAM_HEADERS,
+      async execute(writer) {
+        for await (const delta of iterateGeminiTextDeltas(streamResult)) {
+          writer.write(formatDataStreamPart("text", delta))
+        }
+        writer.write(formatDataStreamPart("finish_message", { finishReason: "stop" }))
+      },
+    })
 
   } catch (error: any) {
     console.error("Error in chat route:", error)

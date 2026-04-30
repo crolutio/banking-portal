@@ -291,11 +291,11 @@ export function CustomerDashboard() {
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <div
                         className={`flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 ${
-                          txn.type === "credit" ? "bg-emerald-500/20" : "bg-muted"
+                          txn.type === "credit" ? "bg-green-500/15" : "bg-muted"
                         }`}
                       >
                         {txn.type === "credit" ? (
-                          <ArrowDownRight className="h-5 w-5 text-emerald-500" />
+                          <ArrowDownRight className="h-5 w-5 text-green-600 dark:text-green-400" />
                         ) : (
                           <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
                         )}
@@ -320,7 +320,7 @@ export function CustomerDashboard() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-sm font-medium ${txn.type === "credit" ? "text-emerald-500" : "text-foreground"}`}>
+                      <span className={`text-sm font-medium ${txn.type === "credit" ? "text-green-600 dark:text-green-400" : "text-foreground"}`}>
                         {txn.type === "credit" ? "+" : "-"}
                         {formatCurrency(txn.amount)}
                       </span>
@@ -457,7 +457,7 @@ export function CustomerDashboard() {
               onClick={() => openChatWithMessage("Tell me about my top spending category and how I can optimize it")}
             >
               <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
+                <TrendingUp className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium">Top Category</span>
               </div>
               <p className="text-2xl font-bold">{topCategoryInsight.label}</p>

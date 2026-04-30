@@ -36,7 +36,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#10b981",
+  themeColor: "#e10801",
   width: "device-width",
   initialScale: 1,
 }
@@ -51,9 +51,10 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem={true}
+          defaultTheme="light"
+          enableSystem={false}
           storageKey="bank-of-the-future-theme"
+          disableTransitionOnChange
         >
           <RoleProvider>
             <FloatingChatProvider>

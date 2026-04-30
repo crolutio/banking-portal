@@ -28,14 +28,14 @@ export function StatCard({
 
   const getTrendIcon = () => {
     if (effectiveChange === undefined) return null
-    if (effectiveChange > 0) return <TrendingUp className="h-3 w-3 text-emerald-500" />
+    if (effectiveChange > 0) return <TrendingUp className="h-3 w-3 text-green-600" />
     if (effectiveChange < 0) return <TrendingDown className="h-3 w-3 text-red-500" />
     return <Minus className="h-3 w-3 text-muted-foreground" />
   }
 
   const getTrendColor = () => {
     if (effectiveChange === undefined) return ""
-    if (effectiveChange > 0) return "text-emerald-500"
+    if (effectiveChange > 0) return "text-green-600"
     if (effectiveChange < 0) return "text-red-500"
     return "text-muted-foreground"
   }

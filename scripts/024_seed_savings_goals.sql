@@ -3,9 +3,9 @@
 
 INSERT INTO savings_goals (id, user_id, name, category, target_amount, current_amount, monthly_contribution, target_date, status, source_account_id, auto_debit, currency, image_url) VALUES
 -- Sarah Chen's savings goals
-('abcd1111-0001-0001-0001-000000000001', '11111111-1111-1111-1111-111111111111', 'Maldives Vacation', 'travel', 25000.00, 18500.00, 2000.00, '2025-06-01', 'active', 'aaaa1111-1111-1111-1111-111111111111', true, 'AED', '/maldives-beach-resort-tropical-paradise.jpg'),
-('abcd1111-0002-0001-0001-000000000002', '11111111-1111-1111-1111-111111111111', 'MacBook Pro', 'shopping', 12000.00, 8400.00, 1200.00, '2025-03-01', 'active', 'aaaa1111-1111-1111-1111-111111111111', true, 'AED', '/macbook-pro-laptop-sleek-modern.jpg'),
-('abcd1111-0003-0001-0001-000000000003', '11111111-1111-1111-1111-111111111111', 'Emergency Fund', 'emergency', 50000.00, 35000.00, 2500.00, '2025-12-31', 'active', 'aaaa1111-2222-2222-2222-222222222222', true, 'AED', '/safety-umbrella-protection-financial-security.jpg'),
+('abcd1111-0001-0001-0001-000000000001', '11111111-1111-1111-1111-111111111111', 'Maldives Vacation', 'travel', 25000.00, 18500.00, 2000.00, '2025-06-01', 'active', 'aaaa1111-1111-1111-1111-111111111111', true, 'AED', '/japan.jpg'),
+('abcd1111-0002-0001-0001-000000000002', '11111111-1111-1111-1111-111111111111', 'MacBook Pro', 'shopping', 12000.00, 8400.00, 1200.00, '2025-03-01', 'active', 'aaaa1111-1111-1111-1111-111111111111', true, 'AED', '/macbook-pro.jpg'),
+('abcd1111-0003-0001-0001-000000000003', '11111111-1111-1111-1111-111111111111', 'Emergency Fund', 'emergency', 50000.00, 35000.00, 2500.00, '2025-12-31', 'active', 'aaaa1111-2222-2222-2222-222222222222', true, 'AED', '/emergency.webp'),
 
 -- Mohammed Ali's savings goals - Fixed: aaaa2222-2222-2222-2222-222222222222 → aaaa2222-1111-1111-1111-111111111111
 ('abcd2222-0001-0001-0001-000000000001', '22222222-2222-2222-2222-222222222222', 'Business Expansion', 'other', 150000.00, 67500.00, 10000.00, '2025-09-01', 'active', 'aaaa2222-1111-1111-1111-111111111111', true, 'AED', '/placeholder.svg?height=200&width=300'),

@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 import { CitationBadge } from "@/components/ai/citation-badge"
+import { normalizeChatMessageDisplayText } from "@/lib/chat-message-format"
 import { isCustomer, useRole } from "@/lib/role-context"
 import { AIAction } from "@/lib/types"
 import { AI_AGENT_PERSONAS, type AIAgentId } from "@/lib/ai/agents"
@@ -78,7 +79,7 @@ const suggestedPrompts = [
   "Review suspicious transactions",
 ]
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const COLORS = ['#0088FE', '#e10801', '#FFBB28', '#FF8042', '#8884d8', '#64748b'];
 
 type AgentTheme = {
   icon: typeof Bot
@@ -232,10 +233,11 @@ const ChartRenderer = ({ data }: { data: any }) => {
 };
 
 const FormattedText = ({ text }: { text: string }) => {
+  const normalized = normalizeChatMessageDisplayText(text)
   // Simple markdown parser
-  const parts = text.split(/(\*\*.*?\*\*|\n)/g);
+  const parts = normalized.split(/(\*\*.*?\*\*|\n)/g);
   return (
-    <span>
+    <span className="whitespace-pre-wrap break-words">
       {parts.map((part, i) => {
         if (part.startsWith("**") && part.endsWith("**")) {
           return <strong key={i} className="font-bold text-foreground">{part.slice(2, -2)}</strong>;
@@ -331,6 +333,8 @@ export function AIBankerChatInterface({
 
   const { messages, input, handleInputChange, handleSubmit, setMessages, isLoading, setInput, append, error } = useChat({
     api: apiPath,
+    // /api/chat: AI SDK data stream. /api/research: raw SSE body (text protocol)
+    streamProtocol: apiPath === "/api/research" ? "text" : "data",
     body: {
       userId: currentUser?.id,
       agentId

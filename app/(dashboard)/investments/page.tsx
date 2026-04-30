@@ -60,7 +60,7 @@ const investmentCategories = [
     name: "Real Estate",
     icon: Home,
     description: "Residential, Commercial & REITs",
-    color: "bg-emerald-500",
+    color: "bg-primary",
     count: 8,
   },
   {
@@ -166,7 +166,7 @@ export default function InvestmentsPage() {
     value
   }))
 
-  const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#f43f5e', '#64748b', '#06b6d4'];
+  const COLORS = ['#3b82f6', '#8b5cf6', '#e10801', '#f59e0b', '#f43f5e', '#64748b', '#06b6d4'];
 
   const sortedByValue = [...userHoldings].sort((a, b) => b.value - a.value)
   const topHolding = sortedByValue[0]
@@ -299,7 +299,7 @@ export default function InvestmentsPage() {
               const Icon = isPositive ? Lightbulb : AlertTriangle
               const iconBg =
                 insight.tone === "positive"
-                  ? "bg-emerald-50 text-emerald-600"
+                  ? "bg-primary/10 text-primary"
                   : insight.tone === "negative"
                     ? "bg-rose-50 text-rose-600"
                     : "bg-slate-50 text-slate-600"
@@ -398,14 +398,14 @@ export default function InvestmentsPage() {
 
                     {topGainers.length > 0 && (
                       <div>
-                        <p className="text-xs font-medium text-emerald-700 mb-1">Top Gainers (all‑time)</p>
+                        <p className="text-xs font-medium text-green-700 mb-1 dark:text-green-400">Top Gainers (all‑time)</p>
                         <ul className="space-y-1">
                           {topGainers.map((h) => (
                             <li key={h.id} className="flex items-center justify-between text-xs">
                               <span className="truncate mr-2">
                                 {h.name} ({h.symbol})
                               </span>
-                              <span className="text-emerald-600 font-semibold">
+                              <span className="text-green-600 font-semibold dark:text-green-400">
                                 +{h.gainPercent.toFixed(1)}%
                               </span>
                             </li>

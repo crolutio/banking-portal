@@ -1,6 +1,5 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { RoleProvider } from "@/lib/role-context"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -8,35 +7,20 @@ import { FloatingChatProvider } from "@/components/ai/floating-chat-context"
 import { FloatingChatBubble } from "@/components/ai/floating-chat-bubble"
 import "./globals.css"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
-
 export const metadata: Metadata = {
-  title: "Bank of the Future | AI-Powered Digital Banking",
-  description:
-    "Experience the future of banking with AI-enhanced digital services, personalized insights, and intelligent financial management.",
-  generator: "v0.app",
+  title: "Etisalat Digital Banking",
+  description: "Your accounts, cards, and payments in one secure place.",
   icons: {
     icon: [
-      {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
-      },
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.svg", type: "image/svg+xml" },
     ],
     apple: "/apple-icon.png",
   },
 }
 
 export const viewport: Viewport = {
-  themeColor: "#e10801",
+  themeColor: "#E00800",
   width: "device-width",
   initialScale: 1,
 }
@@ -48,7 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+      <body className="font-sans antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

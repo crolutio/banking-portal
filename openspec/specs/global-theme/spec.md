@@ -4,12 +4,12 @@
 
 ### Requirement: Brand accent color
 
-The application SHALL use **#e10801** as the main interactive accent for primary actions (including primary buttons, key links, and focus rings) expressed through design tokens mapped to Tailwind `primary` semantics.
+The application SHALL use **#E00800** (e& Red) as the main interactive accent for primary actions (including primary buttons, key links, and focus rings) expressed through design tokens mapped to Tailwind `primary` semantics.
 
 #### Scenario: Light mode primary button
 
 - **WHEN** a user views a standard primary button in light mode
-- **THEN** the button fill reflects the brand accent **#e10801** (via semantic `--primary`), and the label meets contrast requirements against that fill.
+- **THEN** the button fill reflects the brand accent **#E00800** (via semantic `--primary`), and the label meets contrast requirements against that fill.
 
 #### Scenario: Focus visibility
 

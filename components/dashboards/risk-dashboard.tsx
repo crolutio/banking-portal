@@ -43,10 +43,10 @@ export function RiskDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Risk & Compliance Dashboard" description="Monitor alerts, cases, and policy compliance">
+      <PageHeader title="Risk and compliance" description="Alerts, cases, and policy checks in one place">
         <Button asChild>
-          <Link href="/risk">
-            View All Alerts
+          <Link href="/risk-compliance">
+            Open alerts
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>

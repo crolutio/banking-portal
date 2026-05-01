@@ -692,7 +692,7 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Accounts" description="Manage your accounts and view transactions" />
+      <PageHeader title="Accounts" description="Your balances and activity in one place" />
 
       {/* Total Balance Card */}
       <Card className="bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border-primary/30">

@@ -24,7 +24,7 @@ interface DemoTip {
 
 const demoTips: Record<string, DemoTip> = {
   "/home": {
-    title: "Home Demos",
+    title: "Home",
     tips: [
       {
         prompt: "Review suspicious transactions",
@@ -39,12 +39,12 @@ const demoTips: Record<string, DemoTip> = {
     ]
   },
   "/loans": {
-    title: "Loans Demos",
+    title: "Loans",
     tips: [
       { 
         prompt: "I want to take a loan for my Japan trip",
         agentId: "spending_analyst",
-        description: "🎯 The Strategist - Finds savings instead of loan"
+        description: "Checks savings before suggesting a loan"
       },
       {
         prompt: "I want to apply for a 50000 AED loan",
@@ -59,7 +59,7 @@ const demoTips: Record<string, DemoTip> = {
     ]
   },
   "/cards": {
-    title: "Cards Demos",
+    title: "Cards",
     tips: [
       { 
         prompt: "I think my virtual card is compromised",
@@ -79,7 +79,7 @@ const demoTips: Record<string, DemoTip> = {
     ]
   },
   "/accounts": {
-    title: "Accounts Demos",
+    title: "Accounts",
     tips: [
       { 
         prompt: "Auto-boost my Japan trip goal without changing my lifestyle",
@@ -99,7 +99,7 @@ const demoTips: Record<string, DemoTip> = {
     ]
   },
   "/investments": {
-    title: "Investments Demos",
+    title: "Investments",
     tips: [
       { 
         prompt: "Explain the market-shock protection you activated",
@@ -109,7 +109,7 @@ const demoTips: Record<string, DemoTip> = {
     ]
   },
   "/savings-goals": {
-    title: "Savings Goals Demos",
+    title: "Savings goals",
     tips: [
       { 
         prompt: "Auto-boost my Japan trip goal without changing my lifestyle",
@@ -119,7 +119,7 @@ const demoTips: Record<string, DemoTip> = {
     ]
   },
   "/rewards": {
-    title: "Rewards Demos",
+    title: "Rewards",
     tips: [
       { 
         prompt: "I'm traveling—maximize my points for this trip",
@@ -136,7 +136,7 @@ export function DemoHelpTooltip() {
   const { openChatWithMessage } = useFloatingChat()
 
   const currentTips = demoTips[pathname] || {
-    title: "Key Demos",
+    title: "This page",
     tips: [
       { prompt: "Review suspicious transactions", description: "Nobu London verification flow" }
     ]
@@ -162,7 +162,7 @@ export function DemoHelpTooltip() {
             className="gap-2 text-muted-foreground hover:text-foreground"
           >
             <HelpCircle className="h-4 w-4" />
-            <span className="hidden md:inline text-xs">Demo Tips</span>
+            <span className="hidden md:inline text-xs">Quick prompts</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-96" align="start">
@@ -173,7 +173,7 @@ export function DemoHelpTooltip() {
                 {currentTips.title}
               </h4>
               <p className="text-xs text-muted-foreground">
-                Try these prompts to explore AI features on this page
+                Pick a prompt to open chat with text filled in for you
               </p>
             </div>
 
@@ -212,7 +212,7 @@ export function DemoHelpTooltip() {
                       onClick={() => handleSend(tip.prompt, tip.agentId)}
                     >
                       <Send className="h-3 w-3 mr-1" />
-                      Try Now
+                      Try it
                     </Button>
                   </div>
                 </div>
@@ -220,8 +220,8 @@ export function DemoHelpTooltip() {
             </div>
 
             <div className="pt-2 border-t">
-              <p className="text-xs text-muted-foreground text-center">
-                💡 Tip: Click "Try Now" to open chat with the prompt pre-filled
+              <p className="text-xs text-muted-foreground text-left">
+                Use Try it to open chat with the prompt ready to send
               </p>
             </div>
           </div>

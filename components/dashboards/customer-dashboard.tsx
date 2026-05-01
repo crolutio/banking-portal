@@ -232,20 +232,25 @@ export function CustomerDashboard() {
   ]
 
   const aiChips = [
-    "What subscriptions am I paying for and should I cancel any?",
-    "Help me plan a budget for next month",
-    "Show me my spending breakdown by category",
+    "Which subscriptions should I cancel?",
+    "Help me budget next month",
+    "Show spending by category",
   ]
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-[50vh]">Loading dashboard...</div>
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] text-muted-foreground">
+        Loading your dashboard
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <PageHeader
-        title={`Welcome back, ${currentUser.name.split(" ")[0]}`}
-        description="Here's an overview of your finances"
+        title={`Hi, ${currentUser.name.split(" ")[0]}`}
+        description="See balances, spending, and what needs your attention"
+        continuum
       />
 
       {/* Stats Grid */}
@@ -344,7 +349,7 @@ export function CustomerDashboard() {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4 text-muted-foreground">No recent transactions</div>
+                <div className="py-4 text-muted-foreground text-left">No recent transactions</div>
               )}
             </div>
           </CardContent>

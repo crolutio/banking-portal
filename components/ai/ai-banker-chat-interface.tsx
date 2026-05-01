@@ -79,7 +79,7 @@ const suggestedPrompts = [
   "Review suspicious transactions",
 ]
 
-const COLORS = ['#0088FE', '#e10801', '#FFBB28', '#FF8042', '#8884d8', '#64748b'];
+const COLORS = ['#0088FE', '#E00800', '#FFBB28', '#FF8042', '#8884d8', '#64748b'];
 
 type AgentTheme = {
   icon: typeof Bot

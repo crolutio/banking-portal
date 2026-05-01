@@ -53,7 +53,7 @@ import { useCustomerConversations } from "@/lib/hooks/useCustomerConversations"
 import { useConversationMessages } from "@/lib/hooks/useConversationMessages"
 import { createConversation, requestConversationHandover, sendAiMessage } from "@/lib/supportApi"
 
-const CHART_COLORS = ["#0088FE", "#e10801", "#FFBB28", "#FF8042", "#8884d8", "#64748b"]
+const CHART_COLORS = ["#0088FE", "#E00800", "#FFBB28", "#FF8042", "#8884d8", "#64748b"]
 
 
 export default function SupportPage() {

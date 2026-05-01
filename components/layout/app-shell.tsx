@@ -127,10 +127,10 @@ function NotificationBell() {
   if (pathname === "/accounts") {
     notifications.push({
       id: "overdraft-warning",
-      title: "Overdraft Warning",
-      summary: "Upcoming payment would have caused an overdraft.",
+      title: "You avoided an overdraft",
+      summary: "We moved AED 1,500 from savings to cover a bill.",
       detail:
-        "A monthly payment would have caused an overdraft. I moved AED 1,500 from savings to cover it and will return the funds automatically after your next salary credit—no fees, no action needed.",
+        "A monthly payment would have overdrawn your account. We moved AED 1,500 from savings to cover it and will move it back after your next salary lands. No fee, nothing for you to do.",
       requiresReview: true,
     })
   }
@@ -138,8 +138,8 @@ function NotificationBell() {
   if (pathname === "/investments") {
     notifications.push({
       id: "market-shock",
-      title: "Market shock protection activated",
-      summary: "Market shock protection activated.",
+      title: "Portfolio shield is on",
+      summary: "We tightened risk after a sharp market move.",
       requiresReview: false,
     })
   }
@@ -156,7 +156,7 @@ function NotificationBell() {
         <Button variant="ghost" size="icon" className="relative h-9 w-9">
           <Bell className="h-4 w-4" />
           <span className="sr-only">Notifications</span>
-          {hasUnread && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />}
+          {hasUnread && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96">
@@ -286,14 +286,14 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
 
   return (
     <aside className={cn("flex flex-col bg-sidebar text-sidebar-foreground", className)}>
-      <div className="relative flex items-center justify-center px-4 min-h-[120px] border-b border-sidebar-border">
-        <div className="flex items-center justify-center py-8">
-          <Image 
-            src="/etisalat-dark.png"
-            alt="Etisalat" 
-            width={280}
-            height={84}
-            className="object-contain"
+      <div className="relative flex items-center justify-center px-5 min-h-[120px] border-b border-sidebar-border">
+        <div className="flex items-center justify-center py-8 w-full">
+          <Image
+            src="/logo.png"
+            alt="Etisalat"
+            width={165}
+            height={50}
+            className="object-contain object-center max-w-[min(100%,165px)] h-auto"
             priority
           />
         </div>
@@ -334,9 +334,9 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-2 text-xs text-sidebar-muted">
+        <div className="flex items-center gap-2 text-xs text-sidebar-foreground/70">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          <span>AI Systems Online</span>
+          <span>AI services ready</span>
         </div>
       </div>
     </aside>
@@ -358,8 +358,8 @@ function Topbar() {
       <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4 flex-1">
           <div className="w-9 h-9 lg:hidden" /> {/* Placeholder for menu button */}
-          <div className="hidden lg:flex items-center gap-4 flex-1">
-            <div className="flex-1 flex justify-center">
+          <div className="hidden lg:flex items-center gap-4 flex-1 min-w-0">
+            <div className="flex-1 flex justify-start">
               <DemoHelpTooltip />
             </div>
           </div>
@@ -384,8 +384,8 @@ function Topbar() {
           </SheetContent>
         </Sheet>
 
-        <div className="hidden lg:flex items-center gap-4 flex-1">
-          <div className="flex-1 flex justify-center">
+        <div className="hidden lg:flex items-center gap-4 flex-1 min-w-0">
+          <div className="flex-1 flex justify-start">
             <DemoHelpTooltip />
           </div>
         </div>
@@ -437,7 +437,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar className="hidden lg:flex w-64 border-r border-sidebar-border shrink-0" />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 text-left">{children}</main>
       </div>
     </div>
   )

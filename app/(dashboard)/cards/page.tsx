@@ -31,7 +31,7 @@ function CreditCardVisual({ card, showDetails = false }: { card: CardType; showD
   const getCardGradient = () => {
     if (card.type === "credit") return "from-slate-800 via-slate-700 to-slate-900"
     if (card.type === "virtual") return "from-indigo-600 via-indigo-500 to-indigo-700"
-    return "from-[#b00701] via-[#e10801] to-[#9a0601]"
+    return "from-[#b00701] via-[#E00800] to-[#9a0601]"
   }
 
   return (
@@ -390,7 +390,7 @@ export default function CardsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Cards" description="Manage your debit and credit cards" />
+      <PageHeader title="Cards" description="Debit and credit cards you control here" />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Cards Grid - takes 2 columns */}

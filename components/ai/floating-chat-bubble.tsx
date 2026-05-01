@@ -37,7 +37,7 @@ import { useTheme } from "next-themes"
 import { Card } from "@/components/ui/card"
 import { normalizeChatMessageDisplayText } from "@/lib/chat-message-format"
 
-const COLORS = ['#0088FE', '#e10801', '#FFBB28', '#FF8042', '#8884d8', '#64748b']
+const COLORS = ['#0088FE', '#E00800', '#FFBB28', '#FF8042', '#8884d8', '#64748b']
 
 const ChartRenderer = ({ data }: { data: any }) => {
   const { theme } = useTheme()
@@ -829,12 +829,12 @@ export function FloatingChatBubble() {
         className={cn("flex items-center justify-between px-4 py-3 border-b bg-primary/5", isFullscreen ? "rounded-t-2xl" : "rounded-t-2xl")}
       >
         <div className="flex items-center gap-1.5 min-w-0">
-          <div className="relative h-9 w-[118px] shrink-0">
+          <div className="relative h-[27px] w-[89px] shrink-0">
             <Image
-              src="/etisalat-dark.png"
+              src="/logo.png"
               alt="Etisalat"
               fill
-              sizes="120px"
+              sizes="90px"
               className="object-contain object-left"
             />
           </div>

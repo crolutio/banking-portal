@@ -100,10 +100,10 @@ export function RMDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="RM Workspace" description="Manage your client portfolio and opportunities">
+      <PageHeader title="RM workspace" description="Your clients, tasks, and next actions in one view">
         <Button asChild>
           <Link href="/rm-workspace">
-            View Full Workspace
+            Open workspace
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </Button>

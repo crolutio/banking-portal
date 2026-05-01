@@ -166,7 +166,7 @@ export default function InvestmentsPage() {
     value
   }))
 
-  const COLORS = ['#3b82f6', '#8b5cf6', '#e10801', '#f59e0b', '#f43f5e', '#64748b', '#06b6d4'];
+  const COLORS = ['#3b82f6', '#8b5cf6', '#E00800', '#f59e0b', '#f43f5e', '#64748b', '#06b6d4'];
 
   const sortedByValue = [...userHoldings].sort((a, b) => b.value - a.value)
   const topHolding = sortedByValue[0]

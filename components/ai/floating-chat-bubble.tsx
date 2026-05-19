@@ -828,17 +828,15 @@ export function FloatingChatBubble() {
       <div 
         className={cn("flex items-center justify-between px-4 py-3 border-b bg-primary/5", isFullscreen ? "rounded-t-2xl" : "rounded-t-2xl")}
       >
-        <div className="flex items-center gap-1.5 min-w-0">
-          <div className="relative h-[27px] w-[89px] shrink-0">
-            <Image
-              src="/logo.png"
-              alt="Etisalat"
-              fill
-              sizes="90px"
-              className="object-contain object-left"
-            />
-          </div>
-          <h3 className="text-sm font-semibold leading-tight truncate pl-0.5">{persona.title}</h3>
+        <div className="flex items-center gap-3">
+          <Image
+            src={theme === "light" ? "/aideology-head-white.webp" : "/aideology-head.png"}
+            alt="Aideology"
+            width={40}
+            height={40}
+            className="object-contain"
+          />
+          <h3 className="text-sm font-semibold leading-tight truncate">{persona.title}</h3>
         </div>
         
         <div className="flex items-center gap-1">

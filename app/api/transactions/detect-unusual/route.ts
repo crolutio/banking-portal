@@ -3,8 +3,6 @@ import { createDirectClient } from "@/lib/supabase/direct-client"
 import { detectUnusualActivity } from "@/lib/transactions/detect-unusual"
 import { Transaction } from "@/lib/types"
 
-const BATCH_SIZE = 100
-
 export async function POST() {
   const supabase = createDirectClient()
 
@@ -61,12 +59,11 @@ export async function POST() {
     return NextResponse.json({ processed: recentTransactions.length, updated: 0 })
   }
 
-  // Batch update
-  for (let i = 0; i < updates.length; i += BATCH_SIZE) {
-    const batch = updates.slice(i, i + BATCH_SIZE)
-    const { error: updateError } = await supabase.from("transactions").upsert(batch)
+  for (const update of updates) {
+    const { id, ...fields } = update
+    const { error: updateError } = await supabase.from("transactions").update(fields).eq("id", id)
     if (updateError) {
-      console.error("[detect-unusual] Failed to upsert batch", updateError.message)
+      console.error("[detect-unusual] Failed to update transaction", updateError.message)
       return NextResponse.json({ error: "Failed to update flags" }, { status: 500 })
     }
   }

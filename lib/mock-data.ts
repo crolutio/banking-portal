@@ -218,7 +218,7 @@ export const cards: Card[] = [
     lastFour: "4532",
     expiryDate: "12/27",
     status: "active",
-    cardholderName: "SARAH JOHNSON",
+    cardholderName: "SARAH CHEN",
   },
   {
     id: "card_2",
@@ -231,7 +231,7 @@ export const cards: Card[] = [
     status: "active",
     limit: 50000,
     spent: 12450,
-    cardholderName: "SARAH JOHNSON",
+    cardholderName: "SARAH CHEN",
   },
   {
     id: "card_3",
@@ -244,7 +244,7 @@ export const cards: Card[] = [
     status: "active",
     limit: 10000,
     spent: 3200,
-    cardholderName: "SARAH JOHNSON",
+    cardholderName: "SARAH CHEN",
   },
   {
     id: "card_4",
@@ -257,7 +257,7 @@ export const cards: Card[] = [
     status: "active",
     limit: 250000,
     spent: 45000,
-    cardholderName: "MICHAEL CHEN",
+    cardholderName: "MOHAMMED ALI",
   },
 ]
 

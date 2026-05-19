@@ -48,10 +48,14 @@ import {
   Gift,
   Sun,
   Moon,
+  Monitor,
   X,
   Plus,
   Minus,
   Bell,
+  LayoutDashboard,
+  AlertTriangle,
+  CalendarDays,
 } from "lucide-react"
 import { DemoHelpTooltip } from "@/components/layout/demo-help-tooltip"
 
@@ -78,6 +82,14 @@ const navItems: NavItem[] = [
   { label: "Audit Log", href: "/audit", icon: ClipboardList, roles: ["risk_compliance", "admin"] },
 ]
 
+const rmNavItems: NavItem[] = [
+  { label: "Dashboard", href: "/rm-workspace", icon: LayoutDashboard },
+  { label: "Products", href: "/rm-workspace/products", icon: Store },
+  { label: "Risk & Compliance", href: "/risk-compliance", icon: ShieldAlert, roles: ["risk_compliance", "admin"] },
+  { label: "Admin Console", href: "/admin", icon: Settings, roles: ["admin"] },
+  { label: "Audit Log", href: "/audit", icon: ClipboardList, roles: ["risk_compliance", "admin"] },
+]
+
 function ThemeToggle() {
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
@@ -88,27 +100,55 @@ function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Button variant="ghost" size="icon" className="h-9 w-9" disabled>
-        <Sun className="h-4 w-4" />
-        <span className="sr-only">Theme</span>
+      <Button variant="ghost" size="icon" className="h-9 w-9">
+        <Monitor className="h-4 w-4" />
       </Button>
     )
   }
 
-  const isDark = theme === "dark"
+  const getIcon = () => {
+    if (theme === "dark") return <Moon className="h-4 w-4" />
+    if (theme === "light") return <Sun className="h-4 w-4" />
+    return <Monitor className="h-4 w-4" />
+  }
 
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="h-9 w-9"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-    >
-      {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-      <span className="sr-only">{isDark ? "Switch to light mode" : "Switch to dark mode"}</span>
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-9 w-9">
+          {getIcon()}
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Theme</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem 
+          onClick={() => setTheme("light")} 
+          className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+        >
+          <Sun className="h-4 w-4" />
+          <span>Light</span>
+          {theme === "light" && <Check className="h-4 w-4 ml-auto text-primary" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={() => setTheme("dark")} 
+          className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+        >
+          <Moon className="h-4 w-4" />
+          <span>Dark</span>
+          {theme === "dark" && <Check className="h-4 w-4 ml-auto text-primary" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem 
+          onClick={() => setTheme("system")} 
+          className="flex items-center gap-2 hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+        >
+          <Monitor className="h-4 w-4" />
+          <span>System</span>
+          {theme === "system" && <Check className="h-4 w-4 ml-auto text-primary" />}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -156,7 +196,7 @@ function NotificationBell() {
         <Button variant="ghost" size="icon" className="relative h-9 w-9">
           <Bell className="h-4 w-4" />
           <span className="sr-only">Notifications</span>
-          {hasUnread && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />}
+          {hasUnread && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96">
@@ -177,7 +217,7 @@ function NotificationBell() {
                       Review
                     </Button>
                     {reviewed && (
-                      <span className="text-xs text-primary">Reviewed</span>
+                      <span className="text-xs text-emerald-600">Reviewed</span>
                     )}
                   </div>
                   <Dialog
@@ -276,7 +316,10 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
   const pathname = usePathname()
   const { currentRole } = useRole()
 
-  const filteredNavItems = navItems.filter((item) => {
+  const isRM = currentRole === "relationship_manager"
+  const baseItems = isRM ? rmNavItems : navItems
+
+  const filteredNavItems = baseItems.filter((item) => {
     if (!item.roles) return true
     if (item.roles.includes("relationship_manager") && canAccessRMWorkspace(currentRole)) return true
     if (item.roles.includes("risk_compliance") && canAccessRiskCompliance(currentRole)) return true
@@ -284,17 +327,26 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
     return false
   })
 
+  const { resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const isDark = mounted ? (resolvedTheme === "dark") : false
+  const logoSrc = isDark ? "/aideology-logo.png" : "/aideology-logo-light.png"
+
   return (
     <aside className={cn("flex flex-col bg-sidebar text-sidebar-foreground", className)}>
-      <div className="relative flex items-center justify-center px-5 min-h-[120px] border-b border-sidebar-border">
-        <div className="flex items-center justify-center py-8 w-full">
-          <Image
-            src="/logo.png"
-            alt="Etisalat"
-            width={165}
-            height={50}
-            className="object-contain object-center max-w-[min(100%,165px)] h-auto"
-            priority
+      <div className="relative flex items-center justify-center px-4 min-h-[120px] border-b border-sidebar-border">
+        <div className="flex items-center justify-center py-8">
+          <Image 
+            src={logoSrc}
+            alt="Aideology" 
+            width={288} 
+            height={288}
+            className="object-contain"
           />
         </div>
         {onClose && (
@@ -317,7 +369,7 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
 
           return (
             <Link
-              key={item.href}
+              key={item.label}
               href={item.href}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
@@ -334,9 +386,9 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-2 text-xs text-sidebar-foreground/70">
-          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          <span>AI services ready</span>
+        <div className="flex items-center gap-2 text-xs text-sidebar-muted">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>AI Systems Online</span>
         </div>
       </div>
     </aside>
@@ -358,8 +410,8 @@ function Topbar() {
       <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4 flex-1">
           <div className="w-9 h-9 lg:hidden" /> {/* Placeholder for menu button */}
-          <div className="hidden lg:flex items-center gap-4 flex-1 min-w-0">
-            <div className="flex-1 flex justify-start">
+          <div className="hidden lg:flex items-center gap-4 flex-1">
+            <div className="flex-1 flex justify-center">
               <DemoHelpTooltip />
             </div>
           </div>
@@ -384,19 +436,7 @@ function Topbar() {
           </SheetContent>
         </Sheet>
 
-        <div className="hidden lg:flex items-center gap-4 flex-1 min-w-0">
-          <div className="flex-1 flex justify-start">
-            <DemoHelpTooltip />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <div className="lg:hidden">
-          <DemoHelpTooltip />
-        </div>
-        <NotificationBell />
-        <div className="flex items-center gap-1">
+        <div className="hidden lg:flex items-center gap-4 flex-1">
           <Button
             variant="ghost"
             size="icon"
@@ -423,7 +463,17 @@ function Topbar() {
           >
             <Plus className="h-4 w-4" />
           </Button>
+          <div className="flex-1 flex justify-center">
+            <DemoHelpTooltip />
+          </div>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="lg:hidden">
+          <DemoHelpTooltip />
+        </div>
+        <NotificationBell />
         <ThemeToggle />
         <RoleSwitcher />
       </div>
@@ -437,7 +487,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar className="hidden lg:flex w-64 border-r border-sidebar-border shrink-0" />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 text-left">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       </div>
     </div>
   )

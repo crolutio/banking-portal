@@ -43,14 +43,14 @@ export function RMDashboard() {
       const clientIds = (profiles || []).map((p: any) => p.id)
       const { data: accounts, error: accountsError } = await supabase
         .from("accounts")
-        .select("user_id, balance, currency")
-        .in("user_id", clientIds)
+        .select("customer_id, balance, currency")
+        .in("customer_id", clientIds)
 
       if (accountsError) console.error("Error fetching client accounts:", accountsError)
 
       // Map clients with their calculated balance
       const mappedClients = (profiles || []).map((p: any) => {
-        const clientAccounts = accounts?.filter((a: any) => a.user_id === p.id) || []
+        const clientAccounts = accounts?.filter((a: any) => a.customer_id === p.id) || []
         const totalBalance = clientAccounts.reduce((sum: number, acc: any) => {
           const rate = acc.currency === "USD" ? 3.67 : 1
           return sum + Number(acc.balance) * rate
@@ -142,9 +142,10 @@ export function RMDashboard() {
                 const lastInteractionDate = new Date(Date.now() - Math.random() * 1000000000).toISOString()
 
                 return (
-                  <div
+                  <Link
                     key={client.id}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors"
+                    href={`/rm-workspace/${client.id}`}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors group"
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
@@ -177,11 +178,14 @@ export function RMDashboard() {
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{formatCurrency(client.totalBalance)}</p>
-                      <p className="text-xs text-muted-foreground">Total Balance</p>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{formatCurrency(client.totalBalance)}</p>
+                        <p className="text-xs text-muted-foreground">Total Balance</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </div>
-                  </div>
+                  </Link>
                 )
               })}
               {clients.length === 0 && (
@@ -206,7 +210,11 @@ export function RMDashboard() {
               <div className="space-y-3">
                 {nbaList.map((nba) => {
                   return (
-                    <div key={nba.id} className="p-3 rounded-lg bg-muted/30 border border-border">
+                    <Link
+                      key={nba.id}
+                      href={`/rm-workspace/${nba.clientId}`}
+                      className="block p-3 rounded-lg bg-muted/30 border border-border hover:bg-muted/50 transition-colors"
+                    >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-muted-foreground">{nba.clientName}</span>
                         <Badge
@@ -224,7 +232,7 @@ export function RMDashboard() {
                       </div>
                       <p className="text-sm font-medium">{nba.action}</p>
                       <p className="text-xs text-muted-foreground mt-1">{nba.reason}</p>
-                    </div>
+                    </Link>
                   )
                 })}
                 {nbaList.length === 0 && (

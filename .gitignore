@@ -88,3 +88,5 @@ Thumbs.db
 
 # Python version
 .python-version
+banking_db_schema.csv
+callCenter_db_schema.csv

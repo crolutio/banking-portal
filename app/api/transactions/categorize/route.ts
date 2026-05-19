@@ -2,8 +2,6 @@ import { NextResponse } from "next/server"
 import { createDirectClient } from "@/lib/supabase/direct-client"
 import { inferCategory } from "@/lib/transactions/categorize"
 
-const BATCH_SIZE = 100
-
 export async function POST() {
   const supabase = createDirectClient()
 
@@ -55,11 +53,11 @@ export async function POST() {
     return NextResponse.json({ processed: data?.length ?? 0, updated: 0 })
   }
 
-  for (let i = 0; i < updates.length; i += BATCH_SIZE) {
-    const batch = updates.slice(i, i + BATCH_SIZE)
-    const { error: updateError } = await supabase.from("transactions").upsert(batch)
+  for (const update of updates) {
+    const { id, ...fields } = update
+    const { error: updateError } = await supabase.from("transactions").update(fields).eq("id", id)
     if (updateError) {
-      console.error("[categorize] Failed to upsert batch", updateError.message)
+      console.error("[categorize] Failed to update transaction", updateError.message)
       return NextResponse.json({ error: "Failed to update categories" }, { status: 500 })
     }
   }

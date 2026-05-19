@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import Link from "next/link"
 import Image from "next/image"
@@ -250,7 +250,17 @@ function NotificationBell() {
 }
 
 function RoleSwitcher() {
+  const router = useRouter()
   const { currentRole, currentUser, setRole, availableRoles } = useRole()
+
+  const handleRoleSwitch = (role: string) => {
+    setRole(role as any)
+    if (role === "relationship_manager") {
+      router.push("/rm-workspace")
+    } else {
+      router.push("/home")
+    }
+  }
 
   if (!currentUser) {
     return null
@@ -290,7 +300,7 @@ function RoleSwitcher() {
           return (
             <DropdownMenuItem 
               key={role} 
-              onClick={() => setRole(role)} 
+              onClick={() => handleRoleSwitch(role)} 
               className="flex items-center gap-3 py-2 focus:bg-accent/50 dark:focus:bg-accent/20"
             >
               <Avatar className="h-8 w-8">

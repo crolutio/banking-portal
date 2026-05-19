@@ -558,6 +558,7 @@ function formatVoiceConversationHistory(messages: Message[]) {
 
 export function FloatingChatBubble() {
   const pathname = usePathname()
+  const { theme } = useTheme()
   const { currentUser, currentBankingUserId } = useRole()
   const { chatState, agentId, initialMessage, closeChat, minimizeChat, normalizeChat, toggleFullscreen } = useFloatingChat()
   const persona = AI_AGENT_PERSONAS[agentId] ?? AI_AGENT_PERSONAS.banker

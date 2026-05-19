@@ -154,8 +154,8 @@ CLIENT PROFILE:
 - Client Since: ${profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "Unknown"}
 
 FINANCIAL SUMMARY:
-- Total Balance: AED ${totalBalance.toLocaleString("en", { minimumFractionDigits: 2 })}
-- Total Liabilities: AED ${totalLiabilities.toLocaleString("en", { minimumFractionDigits: 2 })}
+- Total Balance: KES ${totalBalance.toLocaleString("en", { minimumFractionDigits: 2 })}
+- Total Liabilities: KES ${totalLiabilities.toLocaleString("en", { minimumFractionDigits: 2 })}
 - Accounts: ${accounts.length}
 - Cards: ${cards.length}
 - Active Loans: ${loans.length}
@@ -192,7 +192,7 @@ GUIDELINES:
 - Answer based ONLY on the provided data. Do not fabricate information.
 - When recommending products, cite specific product names, rates, and eligibility from the catalog.
 - When discussing client history, reference specific conversations, ticket subjects, and message content.
-- Format currency as AED (e.g., AED 1,250.00).
+- Format currency as KES (e.g., KES 1,250.00).
 - Use **bold** for emphasis. Use numbered lists for action items.
 - Be concise and actionable. The RM is busy.
 - Current Date: ${new Date().toISOString().split("T")[0]}

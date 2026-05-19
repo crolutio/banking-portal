@@ -87,7 +87,7 @@ export async function POST(req: Request) {
 
     const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" })
 
-    // Default to Sarah Chen for demo if no user provided
+    // Default to Amina Odhiambo for demo if no user provided
     const userId = requestedUserId || "4e140685-8f38-49ff-aae0-d6109c46873d"
     
     console.log(`[AI Chat] Fetching data for user: ${userId}`)
@@ -161,7 +161,7 @@ export async function POST(req: Request) {
       return Number.isFinite(num) ? num : 0
     }
 
-    // Convert all balances to AED (USD rate = 3.67)
+    // Convert all balances to KES (USD rate = 3.67)
     const totalBalance = accounts.reduce((sum: number, account: any) => {
       const balance = toNumber(account.balance)
       const rate = account.currency === "USD" ? 3.67 : 1
@@ -290,8 +290,8 @@ SPECIAL SCENARIO DETECTED: User wants a loan for travel purposes.
 However, I've analyzed their spending and found significant savings opportunities!
 
 OPTIMIZATION RESULTS:
-- Total Monthly Savings: AED ${optimization.totalMonthlySavings.toFixed(2)}
-- Total Annual Savings: AED ${optimization.totalAnnualSavings.toFixed(2)}
+- Total Monthly Savings: KES ${optimization.totalMonthlySavings.toFixed(2)}
+- Total Annual Savings: KES ${optimization.totalAnnualSavings.toFixed(2)}
 - Number of Opportunities: ${optimization.opportunities.length}
 
 INSTRUCTION: Act as "The Strategist" - Present these savings as a smart alternative to taking a loan. 
@@ -324,9 +324,9 @@ Message tone: Excited, helpful, empowering. "Great news! You don't need a loan -
 SPECIAL SCENARIO DETECTED: User is requesting a loan pre-approval assessment.
 
 LOAN PRE-APPROVAL ANALYSIS:
-- Requested Amount: AED ${requestedAmount.toLocaleString()}
+- Requested Amount: KES ${requestedAmount.toLocaleString()}
 - Approval Status: ${preApproval.approved ? 'PRE-APPROVED' : 'CONDITIONAL'}
-- Monthly Payment: AED ${preApproval.monthlyPayment.toFixed(2)}
+- Monthly Payment: KES ${preApproval.monthlyPayment.toFixed(2)}
 - Interest Rate: ${preApproval.interestRate}%
 - DTI Ratio: ${preApproval.dtiPercentage}%
 
@@ -375,10 +375,10 @@ Message tone: Professional, transparent, supportive.`
 SPECIAL SCENARIO DETECTED: User wants a payment schedule simulation.
 
 LOAN DETAILS:
-- Loan Amount: AED ${loanAmount.toLocaleString()}
+- Loan Amount: KES ${loanAmount.toLocaleString()}
 - Interest Rate: ${interestRate}% APR
 - Term: ${loanTerm} months
-- Monthly Payment: AED ${Math.round(monthlyPayment * 100) / 100}
+- Monthly Payment: KES ${Math.round(monthlyPayment * 100) / 100}
 
 INSTRUCTION: Display the payment schedule as a table showing:
 - Month number
@@ -390,7 +390,7 @@ INSTRUCTION: Display the payment schedule as a table showing:
 Format it as a markdown table using the \`\`\`table code block:
 
 \`\`\`table
-| Month | Payment (AED) | Principal (AED) | Interest (AED) | Remaining Balance (AED) |
+| Month | Payment (KES) | Principal (KES) | Interest (KES) | Remaining Balance (KES) |
 |-------|---------------|-----------------|----------------|-------------------------|
 ${schedule.map(p => `| ${p.month} | ${p.payment.toLocaleString()} | ${p.principal.toLocaleString()} | ${p.interest.toLocaleString()} | ${p.balance.toLocaleString()} |`).join('\n')}
 \`\`\`
@@ -406,8 +406,8 @@ Message tone: Clear, informative, helpful.`
 SPECIAL SCENARIO DETECTED: User wants spending analysis and savings opportunities.
 
 OPTIMIZATION RESULTS:
-- Total Monthly Savings: AED ${optimization.totalMonthlySavings.toFixed(2)}
-- Total Annual Savings: AED ${optimization.totalAnnualSavings.toFixed(2)}
+- Total Monthly Savings: KES ${optimization.totalMonthlySavings.toFixed(2)}
+- Total Annual Savings: KES ${optimization.totalAnnualSavings.toFixed(2)}
 - Opportunities Found: ${optimization.opportunities.length}
 
 INSTRUCTION: Present the savings opportunities with actionable advice.
@@ -478,7 +478,7 @@ SPECIAL SCENARIO DETECTED: User requested a transaction review.
 
 TRANSACTION DETAILS:
 - Description: ${txDescription}
-- Amount: AED ${txAmount}
+- Amount: KES ${txAmount}
 - Date: ${txDate}
 
 INSTRUCTION:
@@ -520,7 +520,7 @@ SPECIAL SCENARIO DETECTED: User is disputing an unauthorized transaction.
 
 DISPUTE DETAILS:
 - Transaction: ${disputedTx.description}
-- Amount: AED ${disputedTx.amount}
+- Amount: KES ${disputedTx.amount}
 - Date: ${disputedTx.date}
 - Reason: Unauthorized transaction
 
@@ -609,7 +609,7 @@ SPECIAL SCENARIO DETECTED: Overdraft prevention notification.
 
 INSTRUCTION:
 Explain that a monthly bill was projected to overdraft the account.
-State that AED 1,500 was moved from savings to cover it, and it will be automatically returned after the next salary credit.
+State that KES 1,500 was moved from savings to cover it, and it will be automatically returned after the next salary credit.
 Emphasize that no fees were charged and no action is required.
 Message tone: Proactive, calm, reassuring.`
     }
@@ -664,7 +664,7 @@ Your goal is to provide accurate, helpful, and concise advice that matches your 
 
 USER CONTEXT:
 - ID: ${userId}
-- Name: Sarah Chen (Demo User)
+- Name: Amina Odhiambo (Demo User)
 
 FINANCIAL DATA OVERVIEW:
 - Accounts: ${accounts.length}
@@ -708,7 +708,7 @@ GUIDELINES:
 - If the user asks about "this month" or "this year", filter the transactions in the data provided.
 - Current Date: ${new Date().toISOString().split('T')[0]}
 - Be professional but friendly.
-- Format currency as AED (e.g., AED 1,250.00).
+- Format currency as KES (e.g., KES 1,250.00).
 - Do not make up data. If something is missing, say so.
 - CRITICAL: Transaction types are either "credit" (income/deposits) or "debit" (spending/withdrawals).
   * SPENDING = transactions with type "debit" (e.g., groceries, restaurants, shopping)

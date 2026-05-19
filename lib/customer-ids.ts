@@ -7,9 +7,9 @@
 
 export const CUSTOMER_IDS = {
   // Existing demo users
-  "Sarah Chen": "4e140685-8f38-49ff-aae0-d6109c46873d",
-  "James Rodriguez": "51880b1d-3935-49dd-bac6-9469d33d3ee3",
-  "David Kim": "2be06428-7933-41f5-a426-f27478e75c1c",
+  "Amina Odhiambo": "4e140685-8f38-49ff-aae0-d6109c46873d",
+  "Peter Mwangi": "51880b1d-3935-49dd-bac6-9469d33d3ee3",
+  "Grace Wanjiku": "2be06428-7933-41f5-a426-f27478e75c1c",
   "System Administrator": "730b0c66-1feb-432a-9718-e3a9755eea7b",
   
   // Additional customers from database
@@ -39,6 +39,6 @@ export function getCustomerName(id: string): string | undefined {
 }
 
 /**
- * Default demo user ID (Sarah Chen)
+ * Default demo user ID (Amina Odhiambo)
  */
-export const DEFAULT_USER_ID = CUSTOMER_IDS["Sarah Chen"]
+export const DEFAULT_USER_ID = CUSTOMER_IDS["Amina Odhiambo"]

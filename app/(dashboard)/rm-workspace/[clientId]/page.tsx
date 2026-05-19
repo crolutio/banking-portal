@@ -160,13 +160,13 @@ export default function Client360Page() {
 
   const clientPrompts: Record<string, string[]> = {
     "4e140685-8f38-49ff-aae0-d6109c46873d": [
-      "Sarah has had multiple card issues — how should I address this?",
+      "Amina has had multiple card issues — how should I address this?",
       "She's paying 8.5% on her personal loan. Any better options?",
       "What product should I pitch for her frequent London trips?",
-      "Her AED 125K savings is sitting idle. What do you suggest?",
+      "Her KES 125K savings is sitting idle. What do you suggest?",
     ],
     "22222222-2222-2222-2222-222222222222": [
-      "Mohammed had a security incident last week — how should I open?",
+      "Brian had a security incident last week — how should I open?",
       "He has 3 active loans. Can we optimize his debt structure?",
       "What insurance product makes sense given his liabilities?",
       "He's expanding his business — what should I offer him?",
@@ -272,7 +272,7 @@ export default function Client360Page() {
                   <p className="text-xs text-muted-foreground">{a.type} · {a.account_number}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium">{formatCurrency(Number(a.balance), a.currency)}</p>
+                  <p className="text-sm font-medium">{formatCurrency(Number(a.balance), a.currency === "USD" ? "USD" : "KES")}</p>
                   <Badge variant="outline" className="text-[10px]">{a.status}</Badge>
                 </div>
               </div>

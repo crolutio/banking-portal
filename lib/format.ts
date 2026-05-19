@@ -1,7 +1,7 @@
 // Utility functions for formatting
 
-export function formatCurrency(amount: number, currency = "AED"): string {
-  return new Intl.NumberFormat("en-AE", {
+export function formatCurrency(amount: number, currency = "KES"): string {
+  return new Intl.NumberFormat("en-KE", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,

@@ -1,9 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"
-import { createDataStreamResponse } from "ai"
-import { formatDataStreamPart } from "@ai-sdk/ui-utils"
-import { iterateGeminiTextDeltas } from "@/lib/gemini-stream-response"
+import { streamText, type CoreMessage } from "ai"
+import { claude, isClaudeConfigured } from "@/lib/ai/claude"
 import { createDirectClient } from "@/lib/supabase/direct-client"
-import { normalizeChatMessageDisplayText } from "@/lib/chat-message-format"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -64,16 +61,12 @@ async function fetchCallCenterData(clientId: string) {
 
 export async function POST(req: Request) {
   try {
-    const { messages, userId, currentPage } = await req.json()
+    const { messages, userId } = await req.json()
 
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      return new Response("Missing GOOGLE_GENERATIVE_AI_API_KEY", { status: 500 })
+    if (!isClaudeConfigured()) {
+      return new Response("Missing CLAUDE_API_KEY", { status: 500 })
     }
 
-    const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY)
-    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" })
-
-    // 1. Profile
     const supabase = createDirectClient()
     const { data: profile, error: profileErr } = await supabase
       .from("profiles")
@@ -85,7 +78,6 @@ export async function POST(req: Request) {
       return new Response(`Client not found: ${userId}`, { status: 404 })
     }
 
-    // 2. Banking data
     const accounts = await fetchBanking("accounts", userId)
     const accountIds = accounts.map((a: any) => a.id)
 
@@ -94,7 +86,6 @@ export async function POST(req: Request) {
       fetchBanking("loans", userId),
     ])
 
-    // 3. Transactions via account IDs
     let transactions: any[] = []
     if (accountIds.length > 0) {
       const { data: txData } = await supabase
@@ -106,7 +97,6 @@ export async function POST(req: Request) {
       transactions = txData ?? []
     }
 
-    // 4. Support tickets with full message threads
     const tickets = await fetchBanking("support_tickets", userId, "user_id")
     const ticketIds = tickets.map((t: any) => t.id)
     let ticketMessages: any[] = []
@@ -127,20 +117,25 @@ export async function POST(req: Request) {
       messages: ticketMessages.filter((m: any) => m.ticket_id === t.id),
     }))
 
-    // 5. Call center conversations (capped at 10, with messages)
     const conversationsWithMessages = await fetchCallCenterData(userId)
 
-    // 6. Product catalog
-    const { data: products } = await supabase.from("products").select("name, description")
+    const { data: products } = await supabase
+      .from("products")
+      .select("name, category, tagline, description, target_segment, rate_pct, term_label")
     const productCatalog = products ?? []
 
-    // 7. Build RM system prompt
-    const toNumber = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
+    const toNumber = (v: any) => {
+      const n = Number(v)
+      return Number.isFinite(n) ? n : 0
+    }
     const totalBalance = accounts.reduce((s: number, a: any) => {
       const rate = a.currency === "USD" ? 3.67 : 1
       return s + toNumber(a.balance) * rate
     }, 0)
-    const totalLiabilities = loans.reduce((s: number, l: any) => s + toNumber(l.remaining_balance), 0)
+    const totalLiabilities = loans.reduce(
+      (s: number, l: any) => s + toNumber(l.remaining_balance),
+      0,
+    )
 
     const systemPrompt = `You are an intelligent advisor assisting a Relationship Manager (RM) at AIdeology Bank. You help the RM prepare for client meetings, identify opportunities, and make data-driven recommendations.
 
@@ -154,8 +149,8 @@ CLIENT PROFILE:
 - Client Since: ${profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "Unknown"}
 
 FINANCIAL SUMMARY:
-- Total Balance: KES ${totalBalance.toLocaleString("en", { minimumFractionDigits: 2 })}
-- Total Liabilities: KES ${totalLiabilities.toLocaleString("en", { minimumFractionDigits: 2 })}
+- Total Balance: AED ${totalBalance.toLocaleString("en", { minimumFractionDigits: 2 })}
+- Total Liabilities: AED ${totalLiabilities.toLocaleString("en", { minimumFractionDigits: 2 })}
 - Accounts: ${accounts.length}
 - Cards: ${cards.length}
 - Active Loans: ${loans.length}
@@ -172,18 +167,22 @@ ${JSON.stringify(loans.map((l: any) => ({ type: l.type, principal_amount: l.prin
 RECENT TRANSACTIONS (last 30):
 ${JSON.stringify(transactions.map((tx: any) => ({ date: tx.date, description: tx.description, amount: tx.amount, type: tx.type, category: tx.category })))}
 
-
 SUPPORT TICKETS (with full message threads):
 ${JSON.stringify(ticketsWithThreads.map((t: any) => ({
-  subject: t.subject, status: t.status, priority: t.priority,
-  messages: t.messages.map((m: any) => ({ sender: m.sender_type, content: m.content, date: m.created_at }))
-})))}
+      subject: t.subject,
+      status: t.status,
+      priority: t.priority,
+      messages: t.messages.map((m: any) => ({ sender: m.sender_type, content: m.content, date: m.created_at })),
+    })))}
 
 CONTACT CENTER CONVERSATIONS (recent, with messages):
 ${JSON.stringify(conversationsWithMessages.map((c: any) => ({
-  subject: c.subject, channel: c.channel, status: c.status, sentiment: c.sentiment,
-  messages: (c.messages ?? []).map((m: any) => ({ sender: m.sender_type, content: m.content, date: m.created_at }))
-})))}
+      subject: c.subject,
+      channel: c.channel,
+      status: c.status,
+      sentiment: c.sentiment,
+      messages: (c.messages ?? []).map((m: any) => ({ sender: m.sender_type, content: m.content, date: m.created_at })),
+    })))}
 
 PRODUCT CATALOG (available for recommendations):
 ${JSON.stringify(productCatalog)}
@@ -192,43 +191,31 @@ GUIDELINES:
 - Answer based ONLY on the provided data. Do not fabricate information.
 - When recommending products, cite specific product names, rates, and eligibility from the catalog.
 - When discussing client history, reference specific conversations, ticket subjects, and message content.
-- Format currency as KES (e.g., KES 1,250.00).
-- Use **bold** for emphasis. Use numbered lists for action items.
+- Format currency as AED (e.g., AED 1,250.00). USD-denominated accounts may show USD.
+- Use **bold** for emphasis. Use numbered lists for action items. Use markdown tables when comparing options.
 - Be concise and actionable. The RM is busy.
 - Current Date: ${new Date().toISOString().split("T")[0]}
 - If asked about something outside banking scope, politely redirect to financial topics.`
 
-    // 8. Stream via Gemini
-    const geminiMessages = [
-      {
-        role: "user",
-        parts: [{ text: `${systemPrompt}\n\nPlease acknowledge you understand this context and are ready to assist.` }],
-      },
-      {
-        role: "model",
-        parts: [{ text: `I have the full picture on ${profile.full_name} — financials, support history, and product catalog. How can I help you prepare?` }],
-      },
-      ...messages.slice(-10).map((msg: any) => ({
-        role: msg.role === "assistant" ? "model" : "user",
-        parts: [{ text: msg.content }],
-      })),
-    ]
+    const recentMessages: CoreMessage[] = (messages ?? [])
+      .slice(-10)
+      .map((msg: any) => ({
+        role: msg.role === "assistant" ? "assistant" : "user",
+        content: msg.content,
+      }))
 
-    const chat = model.startChat({ history: geminiMessages.slice(0, -1) })
-    const lastMessage = messages[messages.length - 1]?.content || ""
-    const streamResult = await chat.sendMessageStream(lastMessage)
+    const result = await streamText({
+      model: claude(),
+      system: systemPrompt,
+      messages: recentMessages,
+      temperature: 0.5,
+    })
 
-    return createDataStreamResponse({
+    return result.toDataStreamResponse({
       headers: CHAT_STREAM_HEADERS,
-      async execute(writer) {
-        for await (const delta of iterateGeminiTextDeltas(streamResult)) {
-          writer.write(formatDataStreamPart("text", delta))
-        }
-        writer.write(formatDataStreamPart("finish_message", { finishReason: "stop" }))
-      },
     })
   } catch (error: any) {
     console.error("[RM Chat] Error:", error)
-    return new Response(error.message || "Internal Server Error", { status: 500 })
+    return new Response(error?.message || "Internal Server Error", { status: 500 })
   }
 }

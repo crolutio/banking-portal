@@ -16,15 +16,16 @@ import type {
   SavingsGoal,
   SavingsGoalTransaction,
 } from "./types"
+import { getAvatarUrl } from "./avatars"
 
 // Users
 export const users: User[] = [
   {
     id: "4e140685-8f38-49ff-aae0-d6109c46873d",
-    name: "Amina Odhiambo",
-    email: "amina.odhiambo@email.com",
+    name: "Sarah Chen",
+    email: "sarah.chen@email.com",
     role: "retail_customer",
-    avatar: "",
+    avatar: getAvatarUrl("4e140685-8f38-49ff-aae0-d6109c46873d"),
     rmId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     segment: "Premium",
     kycStatus: "Verified",
@@ -32,10 +33,10 @@ export const users: User[] = [
   },
   {
     id: "22222222-2222-2222-2222-222222222222",
-    name: "Brian Kariuki",
-    email: "brian.kariuki@email.com",
+    name: "Mohammed Ali",
+    email: "mohammed.ali@email.com",
     role: "retail_customer",
-    avatar: "",
+    avatar: getAvatarUrl("22222222-2222-2222-2222-222222222222"),
     rmId: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
     segment: "Premium",
     kycStatus: "Verified",
@@ -43,18 +44,18 @@ export const users: User[] = [
   },
   {
     id: "51880b1d-3935-49dd-bac6-9469d33d3ee3",
-    name: "Peter Mwangi",
-    email: "peter.rm@bank.com",
+    name: "James Rodriguez",
+    email: "james.rm@bank.com",
     role: "relationship_manager",
-    avatar: "",
+    avatar: getAvatarUrl("51880b1d-3935-49dd-bac6-9469d33d3ee3"),
     createdAt: "2020-06-01",
   },
   {
     id: "2be06428-7933-41f5-a426-f27478e75c1c",
-    name: "Grace Wanjiku",
-    email: "grace.risk@bank.com",
+    name: "David Kim",
+    email: "david.risk@bank.com",
     role: "risk_compliance",
-    avatar: "",
+    avatar: getAvatarUrl("2be06428-7933-41f5-a426-f27478e75c1c"),
     createdAt: "2019-11-15",
   },
   {
@@ -62,7 +63,7 @@ export const users: User[] = [
     name: "System Administrator",
     email: "admin@bank.com",
     role: "admin",
-    avatar: "",
+    avatar: getAvatarUrl("730b0c66-1feb-432a-9718-e3a9755eea7b"),
     createdAt: "2018-04-20",
   },
 ]

@@ -10,22 +10,23 @@ import { useRole } from "@/lib/role-context"
 import { formatCurrency } from "@/lib/format"
 import { createClient } from "@/lib/supabase/client"
 import { ClientSupportSection } from "@/components/rm/client-support-section"
+import { ClientBriefingPanel } from "@/components/rm/client-briefing-panel"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   ArrowLeft,
   Bot,
   CreditCard,
   Landmark,
   Loader2,
+  MessageSquare,
   Shield,
-  ShieldAlert,
   Sparkles,
   Wallet,
-  AlertTriangle,
   ReceiptText,
 } from "lucide-react"
 
@@ -63,10 +64,9 @@ export default function Client360Page() {
   const [cards, setCards] = useState<any[]>([])
   const [loans, setLoans] = useState<any[]>([])
   const [transactions, setTransactions] = useState<any[]>([])
-  const [riskAlerts, setRiskAlerts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const chatEndRef = useRef<HTMLDivElement>(null)
+  const chatScrollRef = useRef<HTMLDivElement>(null)
 
   const { messages, input, handleInputChange, handleSubmit, isLoading: chatLoading, append } = useChat({
     api: "/api/rm-chat",
@@ -74,8 +74,13 @@ export default function Client360Page() {
   })
 
   useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" })
+    const el = chatScrollRef.current
+    if (!el) return
+    // Only auto-scroll the inner chat container when the user is already near the bottom,
+    // so streaming tokens don't yank them back if they've scrolled up to read earlier turns.
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    if (distanceFromBottom < 120) {
+      el.scrollTop = el.scrollHeight
     }
   }, [messages])
 
@@ -106,15 +111,13 @@ export default function Client360Page() {
       setAccounts(accts || [])
       const accountIds = (accts || []).map((a: any) => a.id)
 
-      const [cardsData, loansData, alertsData] = await Promise.all([
+      const [cardsData, loansData] = await Promise.all([
         fetchByCustomerColumn("cards", clientId),
         fetchByCustomerColumn("loans", clientId),
-        fetchByCustomerColumn("risk_alerts", clientId),
       ])
 
       setCards(cardsData)
       setLoans(loansData)
-      setRiskAlerts(alertsData)
 
       if (accountIds.length > 0) {
         const { data: txData } = await supabase
@@ -160,16 +163,16 @@ export default function Client360Page() {
 
   const clientPrompts: Record<string, string[]> = {
     "4e140685-8f38-49ff-aae0-d6109c46873d": [
-      "Amina has had multiple card issues — how should I address this?",
-      "She's paying 8.5% on her personal loan. Any better options?",
-      "What product should I pitch for her frequent London trips?",
-      "Her KES 125K savings is sitting idle. What do you suggest?",
+      "Give me a 60-second snapshot of Sarah — segment, lifestyle, what she cares about, and what's frustrating her right now.",
+      "What do Sarah's last 90 days of transactions and travel tell you about her lifestyle, spending rhythm, and likely upcoming needs?",
+      "Walk me through Sarah's support history — what's the recurring theme, and how does she feel about us right now?",
+      "Compare Sarah to a typical Premium client — where are the gaps in her product mix, and what would I miss if I only looked at her balance?",
     ],
     "22222222-2222-2222-2222-222222222222": [
-      "Brian had a security incident last week — how should I open?",
-      "He has 3 active loans. Can we optimize his debt structure?",
-      "What insurance product makes sense given his liabilities?",
-      "He's expanding his business — what should I offer him?",
+      "Give me a 60-second snapshot of Mohammed — what kind of client is he, what's his trajectory, and what's keeping him up at night?",
+      "What do Mohammed's transactions tell you about his business operations and cash-flow patterns?",
+      "Walk me through Mohammed's support history — anything left unresolved, and what's his tone with the bank lately?",
+      "Looking at his 3 loans, his balances, and his business stage — what does his ideal product portfolio look like in 12 months?",
     ],
   }
 
@@ -229,8 +232,14 @@ export default function Client360Page() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-4">
               <Avatar className="h-14 w-14">
-                <AvatarImage src={profile.avatar_url || "/placeholder.svg"} />
-                <AvatarFallback className="text-lg">{profile.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                <AvatarFallback className="text-lg bg-primary/10 text-primary font-semibold">
+                  {profile.full_name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .slice(0, 2)
+                    .toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div>
                 <CardTitle className="flex items-center gap-2">
@@ -256,6 +265,104 @@ export default function Client360Page() {
         </CardContent>
       </Card>
 
+      <Tabs defaultValue="briefing" className="w-full">
+        <TabsList>
+          <TabsTrigger value="briefing">
+            <Sparkles className="h-3.5 w-3.5" />
+            AI Briefing
+          </TabsTrigger>
+          <TabsTrigger value="copilot">
+            <MessageSquare className="h-3.5 w-3.5" />
+            Ask Copilot
+            {messages.length > 0 && (
+              <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">
+                {messages.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="briefing">
+          <ClientBriefingPanel clientId={clientId} clientName={profile.full_name} />
+        </TabsContent>
+
+        <TabsContent value="copilot">
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Bot className="h-4 w-4 text-primary" /> Relationship Copilot
+              </CardTitle>
+              <CardDescription>
+                Ask follow-up questions about <strong>{profile.full_name}</strong> — financials, support history, and product recommendations.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <form onSubmit={handleSubmit} className="flex gap-2">
+                <Input
+                  value={input}
+                  onChange={handleInputChange}
+                  placeholder={`Ask about ${profile.full_name}...`}
+                />
+                <Button type="submit" disabled={chatLoading || !input.trim()}>
+                  {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ask"}
+                </Button>
+              </form>
+
+              <div className="flex flex-wrap gap-2">
+                {starterPrompts.map((prompt) => (
+                  <Button
+                    key={prompt}
+                    variant="outline"
+                    size="sm"
+                    disabled={chatLoading}
+                    onClick={() => append({ role: "user", content: prompt })}
+                  >
+                    {prompt}
+                  </Button>
+                ))}
+              </div>
+
+              {messages.length > 0 && (
+                <div
+                  ref={chatScrollRef}
+                  className="rounded-lg border bg-background/60 p-4 space-y-4 max-h-[500px] overflow-y-auto overscroll-contain"
+                >
+                  {messages.map((msg) => (
+                    <div key={msg.id} className={`text-sm ${msg.role === "user" ? "font-medium" : ""}`}>
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-1">
+                        {msg.role === "user" ? "You" : "Copilot"}
+                      </span>
+                      {msg.role === "user" ? (
+                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                      ) : (
+                        <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-li:my-0.5 prose-headings:mt-3 prose-headings:mb-1 prose-table:text-xs prose-th:px-3 prose-th:py-1.5 prose-td:px-3 prose-td:py-1.5 prose-th:bg-muted/50 prose-table:border prose-th:border prose-td:border">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {msg.content}
+                          </ReactMarkdown>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Thinking...
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {messages.length === 0 && (
+                <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Ask a question to get AI-powered insights about this client.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Accounts */}
         <Card>
@@ -272,7 +379,7 @@ export default function Client360Page() {
                   <p className="text-xs text-muted-foreground">{a.type} · {a.account_number}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium">{formatCurrency(Number(a.balance), a.currency === "USD" ? "USD" : "KES")}</p>
+                  <p className="text-sm font-medium">{formatCurrency(Number(a.balance), a.currency || "AED")}</p>
                   <Badge variant="outline" className="text-[10px]">{a.status}</Badge>
                 </div>
               </div>
@@ -333,39 +440,6 @@ export default function Client360Page() {
           </CardContent>
         </Card>
 
-        {/* Risk Alerts */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <AlertTriangle className="h-4 w-4 text-red-500" /> Risk Alerts ({riskAlerts.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {riskAlerts.map((a) => (
-              <div key={a.id} className="rounded-lg border p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-medium">{a.title}</p>
-                  <Badge
-                    variant="secondary"
-                    className={
-                      a.severity === "critical"
-                        ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300"
-                        : a.severity === "high"
-                          ? "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300"
-                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300"
-                    }
-                  >
-                    {a.severity}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">{a.description}</p>
-                <Badge variant="outline" className="text-[10px] mt-1">{a.status}</Badge>
-              </div>
-            ))}
-            {riskAlerts.length === 0 && <p className="text-sm text-muted-foreground">No alerts</p>}
-          </CardContent>
-        </Card>
-
         <ClientSupportSection clientId={clientId} clientName={profile.full_name} />
       </div>
 
@@ -396,78 +470,6 @@ export default function Client360Page() {
         </CardContent>
       </Card>
 
-      {/* Relationship Copilot */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Bot className="h-4 w-4 text-primary" /> Relationship Copilot
-          </CardTitle>
-          <CardDescription>
-            AI-powered insights on <strong>{profile.full_name}</strong> — financials, support history, and product recommendations.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <form onSubmit={handleSubmit} className="flex gap-2">
-            <Input
-              value={input}
-              onChange={handleInputChange}
-              placeholder={`Ask about ${profile.full_name}...`}
-            />
-            <Button type="submit" disabled={chatLoading || !input.trim()}>
-              {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Ask"}
-            </Button>
-          </form>
-
-          <div className="flex flex-wrap gap-2">
-            {starterPrompts.map((prompt) => (
-              <Button
-                key={prompt}
-                variant="outline"
-                size="sm"
-                disabled={chatLoading}
-                onClick={() => append({ role: "user", content: prompt })}
-              >
-                {prompt}
-              </Button>
-            ))}
-          </div>
-
-          {messages.length > 0 && (
-            <div className="rounded-lg border p-4 space-y-4 max-h-[500px] overflow-y-auto">
-              {messages.map((msg) => (
-                <div key={msg.id} className={`text-sm ${msg.role === "user" ? "font-medium" : ""}`}>
-                  <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-1">
-                    {msg.role === "user" ? "You" : "Copilot"}
-                  </span>
-                  {msg.role === "user" ? (
-                    <div className="whitespace-pre-wrap">{msg.content}</div>
-                  ) : (
-                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-li:my-0.5 prose-headings:mt-3 prose-headings:mb-1 prose-table:text-xs prose-th:px-3 prose-th:py-1.5 prose-td:px-3 prose-td:py-1.5 prose-th:bg-muted/50 prose-table:border prose-th:border prose-td:border">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {msg.content}
-                      </ReactMarkdown>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {chatLoading && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Thinking...
-                </div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-          )}
-
-          {messages.length === 0 && (
-            <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              Ask a question to get AI-powered insights about this client.
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   )
 }

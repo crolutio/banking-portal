@@ -74,7 +74,7 @@ function AccountCard({
           <div>
             <p className="text-xs text-muted-foreground mb-1">Available Balance</p>
             <p className="text-2xl font-bold">
-              {showBalance ? formatCurrency(account.availableBalance, account.currency === "USD" ? "USD" : "KES") : "••••••"}
+              {showBalance ? formatCurrency(account.availableBalance, account.currency || "AED") : "••••••"}
             </p>
           </div>
           <Button

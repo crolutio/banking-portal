@@ -14,16 +14,16 @@ interface RoleContextType {
 }
 
 const bankingRoleUserMap: Record<UserRole, string> = {
-  retail_customer: CUSTOMER_IDS["Amina Odhiambo"],
-  relationship_manager: CUSTOMER_IDS["Peter Mwangi"],
-  risk_compliance: CUSTOMER_IDS["Grace Wanjiku"],
+  retail_customer: CUSTOMER_IDS["Sarah Chen"],
+  relationship_manager: CUSTOMER_IDS["James Rodriguez"],
+  risk_compliance: CUSTOMER_IDS["David Kim"],
   admin: CUSTOMER_IDS["System Administrator"],
 }
 
 const callCenterRoleUserMap: Record<UserRole, string> = {
-  retail_customer: "4e140685-8f38-49ff-aae0-d6109c46873d", // Amina Odhiambo
-  relationship_manager: "51880b1d-3935-49dd-bac6-9469d33d3ee3", // Peter Mwangi
-  risk_compliance: "2be06428-7933-41f5-a426-f27478e75c1c", // Grace Wanjiku
+  retail_customer: "4e140685-8f38-49ff-aae0-d6109c46873d", // Sarah Chen
+  relationship_manager: "51880b1d-3935-49dd-bac6-9469d33d3ee3", // James Rodriguez
+  risk_compliance: "2be06428-7933-41f5-a426-f27478e75c1c", // David Kim
   admin: "730b0c66-1feb-432a-9718-e3a9755eea7b", // System Administrator
 }
 

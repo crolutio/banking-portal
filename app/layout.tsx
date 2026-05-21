@@ -6,6 +6,7 @@ import { RoleProvider } from "@/lib/role-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { FloatingChatProvider } from "@/components/ai/floating-chat-context"
 import { FloatingChatBubble } from "@/components/ai/floating-chat-bubble"
+import { Toaster } from "sonner"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -59,6 +60,7 @@ export default function RootLayout({
             <FloatingChatProvider>
               {children}
               <FloatingChatBubble />
+              <Toaster position="top-right" richColors closeButton />
             </FloatingChatProvider>
           </RoleProvider>
           <Analytics />

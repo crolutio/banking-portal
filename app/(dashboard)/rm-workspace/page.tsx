@@ -9,20 +9,21 @@ import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Users,
   TrendingUp,
   AlertCircle,
   ArrowRight,
-  Star,
   Target,
   Loader2,
   Shield,
   ShieldAlert,
-  Clock,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
+import { PortfolioPulseRow } from "@/components/rm/portfolio-pulse-row"
+import { readCachedBriefing } from "@/lib/rm/briefing-cache"
+import type { BriefingResponse } from "@/lib/rm/client-briefings"
 
 type ClientData = {
   id: string
@@ -66,6 +67,7 @@ export default function RMWorkspacePage() {
   const [alerts, setAlerts] = useState<RiskAlert[]>([])
   const [tickets, setTickets] = useState<SupportTicket[]>([])
   const [loading, setLoading] = useState(true)
+  const [cachedBriefings, setCachedBriefings] = useState<Record<string, BriefingResponse>>({})
 
   useEffect(() => {
     async function fetchData() {
@@ -119,6 +121,14 @@ export default function RMWorkspacePage() {
       })
 
       setClients(mapped)
+
+      const briefings: Record<string, BriefingResponse> = {}
+      for (const c of mapped) {
+        const cached = readCachedBriefing(c.id)
+        if (cached) briefings[c.id] = cached
+      }
+      setCachedBriefings(briefings)
+
       setLoading(false)
     }
     fetchData()
@@ -192,6 +202,8 @@ export default function RMWorkspacePage() {
         <StatCard title="Pending Actions" value={nbaList.length} icon={Target} />
       </div>
 
+      {currentBankingUserId && <PortfolioPulseRow rmId={currentBankingUserId} />}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -202,47 +214,55 @@ export default function RMWorkspacePage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {clients.map((client) => (
-                <Link
-                  key={client.id}
-                  href={`/rm-workspace/${client.id}`}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={client.avatar || "/placeholder.svg"} alt={client.name} />
-                      <AvatarFallback className="bg-primary/20 text-primary text-xs">
-                        {client.name.split(" ").map((n) => n[0]).join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium">{client.name}</p>
-                        <Badge
-                          variant="secondary"
-                          className={`text-[10px] ${
-                            client.segment === "VIP" || client.segment === "Premium"
-                              ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
-                              : client.segment === "At Risk"
-                                ? "bg-red-500/20 text-red-600 dark:text-red-400"
-                                : "bg-muted"
-                          }`}
-                        >
-                          {client.segment}
-                        </Badge>
+              {clients.map((client) => {
+                const cachedConcern = cachedBriefings[client.id]?.main_concern
+                return (
+                  <Link
+                    key={client.id}
+                    href={`/rm-workspace/${client.id}`}
+                    className="flex items-start justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors group"
+                  >
+                    <div className="flex items-start gap-3 min-w-0">
+                      <Avatar className="h-10 w-10 mt-0.5">
+                        <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
+                          {client.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{client.name}</p>
+                          <Badge
+                            variant="secondary"
+                            className={`text-[10px] ${
+                              client.segment === "VIP" || client.segment === "Premium"
+                                ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
+                                : client.segment === "At Risk"
+                                  ? "bg-red-500/20 text-red-600 dark:text-red-400"
+                                  : "bg-muted"
+                            }`}
+                          >
+                            {client.segment}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{client.email}</p>
+                        {cachedConcern && (
+                          <div className="mt-1 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                            <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                            <span className="line-clamp-1">{cachedConcern}</span>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground">{client.email}</p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{formatCurrency(client.totalBalance)}</p>
-                      <p className="text-xs text-muted-foreground">Total Balance</p>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{formatCurrency(client.totalBalance)}</p>
+                        <p className="text-xs text-muted-foreground">Total Balance</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                )
+              })}
               {clients.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
                   No clients assigned to your portfolio.
@@ -328,27 +348,6 @@ export default function RMWorkspacePage() {
             </Card>
           )}
 
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-sm">Today&apos;s Schedule</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {clients.slice(0, 2).map((client, i) => (
-                  <div key={client.id} className="flex items-center gap-2 text-sm">
-                    <div className={`w-2 h-2 rounded-full ${i === 0 ? "bg-primary" : "bg-muted-foreground"}`} />
-                    <span>{i === 0 ? "10:00 AM" : "2:00 PM"} — Portfolio review with {client.name}</span>
-                  </div>
-                ))}
-                {clients.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No appointments today</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

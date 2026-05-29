@@ -1,7 +1,18 @@
-// Utility functions for formatting
+// Utility functions for formatting.
+//
+// Each formatter accepts an optional `locale` so the same function can be
+// used from market-aware (Kenya/UAE) and legacy callsites. Defaults match
+// the pre-multi-market behavior (UAE / AED) so existing callers are
+// unaffected. For market-aware React components, prefer the hook
+// `useFormatCurrency()` exported from `lib/market-context.tsx` instead of
+// passing the locale explicitly.
 
-export function formatCurrency(amount: number, currency = "AED"): string {
-  return new Intl.NumberFormat("en-AE", {
+export function formatCurrency(
+  amount: number,
+  currency = "AED",
+  locale = "en-AE",
+): string {
+  return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
@@ -9,20 +20,20 @@ export function formatCurrency(amount: number, currency = "AED"): string {
   }).format(amount)
 }
 
-export function formatNumber(num: number): string {
-  return new Intl.NumberFormat("en-AE").format(num)
+export function formatNumber(num: number, locale = "en-AE"): string {
+  return new Intl.NumberFormat(locale).format(num)
 }
 
-export function formatDate(date: string | Date): string {
-  return new Intl.DateTimeFormat("en-AE", {
+export function formatDate(date: string | Date, locale = "en-AE"): string {
+  return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
   }).format(new Date(date))
 }
 
-export function formatDateTime(date: string | Date): string {
-  return new Intl.DateTimeFormat("en-AE", {
+export function formatDateTime(date: string | Date, locale = "en-AE"): string {
+  return new Intl.DateTimeFormat(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",

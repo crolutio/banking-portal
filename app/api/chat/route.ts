@@ -11,6 +11,8 @@ import { analyzeLoanPreApproval } from "@/lib/calculations/loan-preapproval"
 import { analyzeSpendingOptimization } from "@/lib/calculations/spending-optimizer"
 import { runLangGraphAgent } from "@/lib/agent/langgraph-agent"
 import { normalizeChatMessageDisplayText } from "@/lib/chat-message-format"
+import { DEFAULT_MARKET, MARKET_CONFIG, isMarket, type Market } from "@/lib/markets"
+import { buildLightMarketContext } from "@/lib/ai/market-context"
 
 // Set the runtime to nodejs for better compatibility
 export const runtime = "nodejs"
@@ -63,6 +65,7 @@ async function fetchData(table: string, userId: string, column = "customer_id") 
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json()
     const {
       messages,
       userId: requestedUserId,
@@ -70,9 +73,12 @@ export async function POST(req: Request) {
       currentPage,
       voiceAssist,
       stream = true,
-    } = await req.json()
+    } = body
     const persona = getAgentPersona(agentId)
     const isHybrid = voiceAssist === true
+    const market: Market = isMarket(body.market) ? body.market : DEFAULT_MARKET
+    const marketCfg = MARKET_CONFIG[market]
+    const usdRate = marketCfg.usdToHomeRate
 
     console.log("Checking API Keys:", { 
       hasGemini: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY, 
@@ -161,15 +167,15 @@ export async function POST(req: Request) {
       return Number.isFinite(num) ? num : 0
     }
 
-    // Convert all balances to AED (USD rate = 3.67)
+    // Convert all balances to the active market's home currency.
     const totalBalance = accounts.reduce((sum: number, account: any) => {
       const balance = toNumber(account.balance)
-      const rate = account.currency === "USD" ? 3.67 : 1
+      const rate = account.currency === "USD" ? usdRate : 1
       return sum + (balance * rate)
     }, 0)
     const availableCash = accounts.reduce((sum: number, account: any) => {
       const balance = toNumber(account.available_balance ?? account.balance)
-      const rate = account.currency === "USD" ? 3.67 : 1
+      const rate = account.currency === "USD" ? usdRate : 1
       return sum + (balance * rate)
     }, 0)
 
@@ -657,6 +663,8 @@ ${getPageSpecificContext(currentPage)}
 
     // Prepare System Prompt
     const systemPrompt = `
+${buildLightMarketContext(market)}
+
 ${persona.personaPrompt}${scenarioEnhancement}${pageContext}
 
 You work for "Bank of the Future" and have access to the user's complete financial data.
@@ -708,7 +716,6 @@ GUIDELINES:
 - If the user asks about "this month" or "this year", filter the transactions in the data provided.
 - Current Date: ${new Date().toISOString().split('T')[0]}
 - Be professional but friendly.
-- Format currency as AED (e.g., AED 1,250.00).
 - Do not make up data. If something is missing, say so.
 - CRITICAL: Transaction types are either "credit" (income/deposits) or "debit" (spending/withdrawals).
   * SPENDING = transactions with type "debit" (e.g., groceries, restaurants, shopping)

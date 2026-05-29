@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Mail, MessageCircle, MessageSquare, Send, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useMarket } from "@/lib/market-context"
 
 type Channel = "email" | "sms" | "whatsapp"
 type Tone = "warm" | "direct" | "formal"
@@ -53,6 +54,7 @@ export function OutreachDialog({
   clientName,
   opportunity,
 }: OutreachDialogProps) {
+  const { market } = useMarket()
   const [channel, setChannel] = useState<Channel>("email")
   const [tone, setTone] = useState<Tone>("warm")
   const [draft, setDraft] = useState("")
@@ -75,7 +77,7 @@ export function OutreachDialog({
       const res = await fetch("/api/rm-draft-outreach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, opportunity, channel, tone }),
+        body: JSON.stringify({ clientId, opportunity, channel, tone, market }),
         signal: controller.signal,
       })
 
@@ -98,7 +100,7 @@ export function OutreachDialog({
     } finally {
       setStreaming(false)
     }
-  }, [clientId, opportunity, channel, tone])
+  }, [clientId, opportunity, channel, tone, market])
 
   useEffect(() => {
     if (open) {

@@ -1,7 +1,8 @@
-import { generateObject } from "ai"
-import { z } from "zod"
-import { claude, isClaudeConfigured } from "@/lib/ai/claude"
+import { isClaudeConfigured } from "@/lib/ai/claude"
 import { createDirectClient } from "@/lib/supabase/direct-client"
+import { DEFAULT_MARKET, MARKET_CONFIG, isMarket, type Market } from "@/lib/markets"
+import { generateBriefingForClient } from "@/lib/rm/briefing-generator"
+import type { BriefingResponse } from "@/lib/rm/client-briefings"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -15,27 +16,8 @@ interface PulseItem {
   urgency: Urgency
 }
 
-const itemSchema = z.object({
-  clientId: z.string(),
-  reason: z
-    .string()
-    .max(140)
-    .describe(
-      "One short sentence (max ~120 chars) explaining why this client needs attention now. Specific, actionable, banker-speak.",
-    ),
-  urgency: z
-    .enum(["high", "medium", "low"])
-    .describe(
-      "high = action needed today/this week, medium = within 2 weeks, low = opportunity to surface next interaction",
-    ),
-})
-
-const pulseSchema = z.object({
-  items: z.array(itemSchema).max(5),
-})
-
 const FALLBACK_BY_RM: Record<string, PulseItem[]> = {
-  // James Rodriguez (demo RM)
+  // James Rodriguez (UAE RM)
   "51880b1d-3935-49dd-bac6-9469d33d3ee3": [
     {
       clientId: "4e140685-8f38-49ff-aae0-d6109c46873d",
@@ -56,11 +38,34 @@ const FALLBACK_BY_RM: Record<string, PulseItem[]> = {
       urgency: "low",
     },
   ],
+  // Peter Mwangi (Kenya RM)
+  "11ce0003-0003-4003-a003-000000000003": [
+    {
+      clientId: "11ce0001-0001-4001-a001-000000000001",
+      clientName: "Wanjiru Kamau",
+      reason: "Card blocked in Kigali — needs travel-flag review and goodwill FX waiver.",
+      urgency: "high",
+    },
+    {
+      clientId: "11ce0002-0002-4002-a002-000000000002",
+      clientName: "Otieno Ouma",
+      reason: "KEMSA tender statements pending — high-priority ticket open 7 days.",
+      urgency: "high",
+    },
+  ],
 }
 
 function safeNumber(v: any): number {
   const n = Number(v)
   return Number.isFinite(n) ? n : 0
+}
+
+/** Renders an ISO timestamp as something a banker would actually say in a sentence ("May 21, 2026"). */
+function formatDateForPrompt(iso: string): string {
+  if (!iso) return ""
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
 }
 
 interface ClientSignals {
@@ -71,33 +76,42 @@ interface ClientSignals {
   openHighPriorityTickets: number
   openTickets: number
   activeLoans: number
+  loanTypes: string[]
   hasUnusualTransaction: boolean
   hasCardBlocked: boolean
   recentTicketSubject: string | null
+  recentTicketPriority: string | null
+  /** Single most-recent unusual transaction, with description + amount, for narrative grounding. */
+  recentUnusualTx: { description: string; amount: number; date: string } | null
 }
 
-async function gatherSignals(rmId: string): Promise<ClientSignals[]> {
+async function gatherSignals(rmId: string, market: Market): Promise<ClientSignals[]> {
   const supabase = createDirectClient()
 
+  // Scope client enumeration to the active market. Downstream queries
+  // are then implicitly scoped via the resulting clientIds.
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, full_name, segment")
     .eq("assigned_rm_id", rmId)
+    .eq("market", market)
 
   if (!profiles || profiles.length === 0) return []
 
   const clientIds = profiles.map((p: any) => p.id)
+  const usdRate = MARKET_CONFIG[market].usdToHomeRate
 
   const [accountsRes, ticketsRes, loansRes, cardsRes] = await Promise.all([
     supabase.from("accounts").select("customer_id, balance, currency").in("customer_id", clientIds),
     supabase
       .from("support_tickets")
-      .select("user_id, subject, priority, status")
+      .select("user_id, subject, priority, status, created_at")
       .in("user_id", clientIds)
-      .in("status", ["open", "in_progress"]),
+      .in("status", ["open", "in_progress"])
+      .order("created_at", { ascending: false }),
     supabase
       .from("loans")
-      .select("customer_id, status")
+      .select("customer_id, type, status")
       .in("customer_id", clientIds)
       .eq("status", "active"),
     supabase
@@ -122,31 +136,49 @@ async function gatherSignals(rmId: string): Promise<ClientSignals[]> {
   const accountIds = Array.from(accountIdToClient.keys())
   let unusualTxs: any[] = []
   if (accountIds.length > 0) {
+    // Pull description + amount so the AI has concrete narrative material
+    // (a "Carrefour Kenya cheque uncleared" line beats a boolean every time).
     const { data: txData } = await supabase
       .from("transactions")
-      .select("account_id, is_unusual, date")
+      .select("account_id, is_unusual, date, description, amount")
       .in("account_id", accountIds)
       .eq("is_unusual", true)
       .order("date", { ascending: false })
-      .limit(20)
+      .limit(30)
     unusualTxs = txData ?? []
   }
 
   return profiles.map((p: any) => {
     const clientAccounts = accounts.filter((a: any) => a.customer_id === p.id)
     const totalBalance = clientAccounts.reduce((s: number, a: any) => {
-      const rate = a.currency === "USD" ? 3.67 : 1
+      const rate = a.currency === "USD" ? usdRate : 1
       return s + safeNumber(a.balance) * rate
     }, 0)
-    const clientTickets = tickets.filter((t: any) => t.user_id === p.id)
+    // Tickets are ordered created_at DESC; first one is the most recent.
+    // High-priority tickets bubble to the top so they win as `recentTicketSubject`.
+    const clientTickets = tickets
+      .filter((t: any) => t.user_id === p.id)
+      .sort((a: any, b: any) => {
+        const aPri = a.priority === "high" || a.priority === "urgent" ? 0 : 1
+        const bPri = b.priority === "high" || b.priority === "urgent" ? 0 : 1
+        return aPri - bPri
+      })
     const highPri = clientTickets.filter(
       (t: any) => t.priority === "high" || t.priority === "urgent",
     )
     const clientLoans = loans.filter((l: any) => l.customer_id === p.id)
+    const loanTypes = Array.from(new Set(clientLoans.map((l: any) => String(l.type ?? "")).filter(Boolean))) as string[]
     const clientCards = cards.filter((c: any) => c.customer_id === p.id)
-    const hasUnusual = unusualTxs.some(
+    const clientUnusual = unusualTxs.filter(
       (tx: any) => accountIdToClient.get(tx.account_id) === p.id,
     )
+    const recentUnusualTx = clientUnusual[0]
+      ? {
+          description: String(clientUnusual[0].description ?? "Unusual transaction"),
+          amount: safeNumber(clientUnusual[0].amount),
+          date: String(clientUnusual[0].date ?? ""),
+        }
+      : null
     const hasCardBlocked = clientCards.some((c: any) => c.status === "blocked")
     return {
       clientId: p.id,
@@ -156,11 +188,44 @@ async function gatherSignals(rmId: string): Promise<ClientSignals[]> {
       openHighPriorityTickets: highPri.length,
       openTickets: clientTickets.length,
       activeLoans: clientLoans.length,
-      hasUnusualTransaction: hasUnusual,
+      loanTypes,
+      hasUnusualTransaction: clientUnusual.length > 0,
       hasCardBlocked,
       recentTicketSubject: clientTickets[0]?.subject ?? null,
+      recentTicketPriority: clientTickets[0]?.priority ?? null,
+      recentUnusualTx,
     }
   })
+}
+
+/**
+ * Builds a narrative 1–2 sentence deterministic reason that leans on the
+ * client's MOST specific signal (ticket subject → unusual tx description →
+ * distinct loan type → balance). Used when the LLM is unavailable or returns
+ * a true duplicate across clients. Each branch deliberately uses a different
+ * sentence shape so two clients hitting different branches feel distinct.
+ */
+function buildDeterministicReason(s: ClientSignals, currency: string): string {
+  const fmt = (n: number) => `${currency} ${Math.abs(n).toLocaleString("en", { maximumFractionDigits: 0 })}`
+  if (s.openHighPriorityTickets > 0 && s.recentTicketSubject) {
+    return `${s.clientName.split(" ")[0]} has an open ${s.recentTicketPriority ?? "high"}-priority ticket: "${s.recentTicketSubject}". Resolve or escalate before next contact.`
+  }
+  if (s.recentTicketSubject) {
+    return `An open support thread is sitting on "${s.recentTicketSubject}". A quick follow-up will close it out before it escalates.`
+  }
+  if (s.hasCardBlocked) {
+    return `Card is currently blocked and needs proactive outreach today — confirm the trigger with the client and arrange a replacement.`
+  }
+  if (s.recentUnusualTx) {
+    return `${s.clientName.split(" ")[0]}'s ${fmt(s.recentUnusualTx.amount)} ${s.recentUnusualTx.description} from ${formatDateForPrompt(s.recentUnusualTx.date)} was auto-flagged as unusual. A short courtesy call will confirm it's legitimate and keep the relationship warm.`
+  }
+  if (s.loanTypes.length >= 2) {
+    return `${s.activeLoans} active loans currently running (${s.loanTypes.slice(0, 3).join(", ")}). Consolidation conversation could simplify their position and improve the relationship.`
+  }
+  if (s.activeLoans >= 3) {
+    return `${s.activeLoans} active loans on book — a debt consolidation review could unlock meaningful savings for the client and tighter relationship economics for the bank.`
+  }
+  return `${fmt(s.totalBalance)} sitting across accounts — wallet-share opportunity worth exploring on the next touchpoint.`
 }
 
 function scoreUrgency(s: ClientSignals): { score: number; urgency: Urgency } {
@@ -177,7 +242,7 @@ function scoreUrgency(s: ClientSignals): { score: number; urgency: Urgency } {
 
 export async function POST(req: Request) {
   try {
-    let body: { rmId?: unknown } = {}
+    let body: { rmId?: unknown; market?: unknown } = {}
     try {
       body = await req.json()
     } catch {
@@ -187,8 +252,11 @@ export async function POST(req: Request) {
     if (!rmId || typeof rmId !== "string") {
       return Response.json({ error: "Missing or invalid rmId" }, { status: 400 })
     }
+    // Fall back to default market if the client didn't send one.
+    const market: Market = isMarket(body.market) ? body.market : DEFAULT_MARKET
+    const marketCfg = MARKET_CONFIG[market]
 
-    const signals = await gatherSignals(rmId)
+    const signals = await gatherSignals(rmId, market)
     if (signals.length === 0) {
       return Response.json({ items: [] }, { status: 200 })
     }
@@ -207,95 +275,56 @@ export async function POST(req: Request) {
       const items: PulseItem[] = topN.map((s) => ({
         clientId: s.clientId,
         clientName: s.clientName,
-        reason: s.openHighPriorityTickets
-          ? `Open high-priority ticket: ${s.recentTicketSubject}`
-          : s.hasCardBlocked
-            ? `Card currently blocked — needs proactive outreach.`
-            : s.hasUnusualTransaction
-              ? `Unusual transaction flagged — review with client.`
-              : s.activeLoans >= 3
-                ? `${s.activeLoans} active loans — debt consolidation opportunity.`
-                : `Significant balance with attention opportunity.`,
+        reason: buildDeterministicReason(s, marketCfg.currency),
         urgency: s.urgency,
       }))
       return Response.json({ items }, { status: 200 })
     }
 
-    const systemPrompt = `You are an analyst preparing a one-line "why this client needs attention now" reason for a Relationship Manager's dashboard. For each candidate, return:
-  - clientId (exact match from input)
-  - reason: ONE short sentence (max ~120 characters), specific and actionable. Reference the actual signal you see (open ticket subject, card status, loan count, balance). Never invent.
-  - urgency: high / medium / low based on the signal strength
+    // Generate full briefings for the top-3 clients in parallel. The Pulse
+    // blurb is just each briefing's `main_concern` (one tight sentence) — by
+    // reusing the briefing pipeline we get the same depth and the same
+    // anti-hallucination grounding for free, instead of a thinner parallel
+    // LLM call that drifts. As a bonus, the full briefings ride back in the
+    // response so the client can pre-warm its briefing cache and the
+    // per-client briefing card opens instantly when the RM clicks in.
+    const briefingResults = await Promise.allSettled(
+      topN.map((s) => generateBriefingForClient(s.clientId, market)),
+    )
 
-Output a JSON object with an "items" array of length equal to inputs.
-Tone: experienced banker, terse, no fluff.
-Currency: AED with thousands separators.`
-
-    const userPrompt = `RM is reviewing their dashboard. Here are 3 candidate clients with deterministic signals:
-
-${topN
-  .map((s, i) => {
-    return `Candidate ${i + 1}:
-- clientId: ${s.clientId}
-- name: ${s.clientName}
-- segment: ${s.segment ?? "Standard"}
-- total balance: AED ${s.totalBalance.toLocaleString("en", { maximumFractionDigits: 0 })}
-- open tickets: ${s.openTickets} (${s.openHighPriorityTickets} high priority)
-- recent ticket subject: ${s.recentTicketSubject ?? "—"}
-- active loans: ${s.activeLoans}
-- card blocked: ${s.hasCardBlocked ? "yes" : "no"}
-- unusual transaction flagged: ${s.hasUnusualTransaction ? "yes" : "no"}
-- deterministic urgency suggestion: ${s.urgency}`
-  })
-  .join("\n\n")}
-
-Return the items array. Preserve clientId exactly. Adjust urgency if you disagree with the deterministic suggestion based on the signal mix.`
-
-    try {
-      const { object } = await generateObject({
-        model: claude(),
-        schema: pulseSchema,
-        system: systemPrompt,
-        prompt: userPrompt,
-        temperature: 0.4,
-      })
-
-      const nameById = new Map(topN.map((s) => [s.clientId, s.clientName]))
-      const items: PulseItem[] = (object.items ?? [])
-        .filter((it) => nameById.has(it.clientId))
-        .map((it) => ({
-          clientId: it.clientId,
-          clientName: nameById.get(it.clientId)!,
-          reason: it.reason,
-          urgency: it.urgency,
-        }))
-
-      if (items.length === 0) {
-        const fallback = FALLBACK_BY_RM[rmId]
-        return Response.json({ items: fallback ?? [] }, { status: 200 })
+    const briefings: Record<string, BriefingResponse> = {}
+    const items: PulseItem[] = topN.map((s, i) => {
+      const result = briefingResults[i]
+      if (result.status === "fulfilled" && result.value?.main_concern) {
+        briefings[s.clientId] = result.value
+        return {
+          clientId: s.clientId,
+          clientName: s.clientName,
+          reason: result.value.main_concern,
+          urgency: s.urgency,
+        }
       }
-
-      const rank = { high: 0, medium: 1, low: 2 }
-      items.sort((a, b) => rank[a.urgency] - rank[b.urgency])
-
-      return Response.json({ items }, { status: 200 })
-    } catch (aiErr: any) {
-      console.warn("[Portfolio Pulse] AI failed, using deterministic reasons:", aiErr?.message)
-      const items: PulseItem[] = topN.map((s) => ({
+      console.warn(
+        `[Portfolio Pulse] Briefing failed for ${s.clientName} (${s.clientId})`,
+        result.status === "rejected" ? result.reason?.message ?? result.reason : "no main_concern",
+      )
+      return {
         clientId: s.clientId,
         clientName: s.clientName,
-        reason: s.openHighPriorityTickets
-          ? `Open high-priority ticket: ${s.recentTicketSubject}`
-          : s.hasCardBlocked
-            ? `Card currently blocked — needs proactive outreach.`
-            : s.hasUnusualTransaction
-              ? `Unusual transaction flagged — review with client.`
-              : s.activeLoans >= 3
-                ? `${s.activeLoans} active loans — debt consolidation opportunity.`
-                : `Significant balance with attention opportunity.`,
+        reason: buildDeterministicReason(s, marketCfg.currency),
         urgency: s.urgency,
-      }))
-      return Response.json({ items }, { status: 200 })
+      }
+    })
+
+    if (items.length === 0) {
+      const fallback = FALLBACK_BY_RM[rmId]
+      return Response.json({ items: fallback ?? [] }, { status: 200 })
     }
+
+    const rank = { high: 0, medium: 1, low: 2 }
+    items.sort((a, b) => rank[a.urgency] - rank[b.urgency])
+
+    return Response.json({ items, briefings }, { status: 200 })
   } catch (error: any) {
     console.error("[Portfolio Pulse] Error:", error)
     return Response.json(

@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react"
 import { useRole } from "@/lib/role-context"
-import { formatCurrency, formatCardNumber } from "@/lib/format"
+import { formatCardNumber } from "@/lib/format"
+import { useFormatCurrency } from "@/lib/market-context"
 import { PageHeader } from "@/components/ui/page-header"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -103,6 +104,7 @@ function CardActions({
   onFreeze: () => void
   onUnfreeze: () => void
 }) {
+  const formatCurrency = useFormatCurrency()
   const [showLimitsDialog, setShowLimitsDialog] = useState(false)
   const [showReplaceDialog, setShowReplaceDialog] = useState(false)
   const [newLimit, setNewLimit] = useState(card.limit || 50000)
@@ -313,6 +315,7 @@ function CardInsightsPanel({ card }: { card: CardType }) {
 
 export default function CardsPage() {
   const { currentUser, currentBankingUserId } = useRole()
+  const formatCurrency = useFormatCurrency()
   const [selectedCard, setSelectedCard] = useState<CardType | null>(null)
   const [cards, setCards] = useState<CardType[]>([])
   const [isLoading, setIsLoading] = useState(true)

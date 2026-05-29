@@ -10,7 +10,6 @@ import {
   Lightbulb,
   Loader2,
   Mail,
-  RefreshCw,
   Sparkles,
   Target,
   WifiOff,
@@ -26,6 +25,7 @@ import {
   writeCachedBriefing,
   clearCachedBriefing,
 } from "@/lib/rm/briefing-cache"
+import { useMarket } from "@/lib/market-context"
 import { ConversationDigest } from "@/components/rm/conversation-digest"
 import { OutreachDialog } from "@/components/rm/outreach-dialog"
 
@@ -40,6 +40,7 @@ export function ClientBriefingPanel({
   clientId: string
   clientName: string
 }) {
+  const { market } = useMarket()
   const [briefing, setBriefing] = useState<BriefingResponse | null>(null)
   const [source, setSource] = useState<Source>("live")
   const [loading, setLoading] = useState(true)
@@ -53,7 +54,7 @@ export function ClientBriefingPanel({
       setError(null)
 
       if (!opts?.skipCache) {
-        const cached = readCachedBriefing(clientId)
+        const cached = readCachedBriefing(clientId, market)
         if (cached) {
           setBriefing(cached)
           setSource("cache")
@@ -80,7 +81,7 @@ export function ClientBriefingPanel({
         const res = await fetch("/api/rm-briefing", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ clientId }),
+          body: JSON.stringify({ clientId, market }),
           signal: controller.signal,
         })
 
@@ -92,7 +93,7 @@ export function ClientBriefingPanel({
         if (!isCurrent()) return
         setBriefing(data)
         setSource("live")
-        writeCachedBriefing(clientId, data)
+        writeCachedBriefing(clientId, data, market)
       } catch (err: any) {
         if (!isCurrent()) return
         // AbortError without our timeout flag = component unmount or
@@ -113,7 +114,7 @@ export function ClientBriefingPanel({
         if (isCurrent()) setLoading(false)
       }
     },
-    [clientId],
+    [clientId, market],
   )
 
   useEffect(() => {
@@ -122,7 +123,7 @@ export function ClientBriefingPanel({
   }, [loadBriefing])
 
   const handleRefresh = () => {
-    clearCachedBriefing(clientId)
+    clearCachedBriefing(clientId, market)
     loadBriefing({ skipCache: true })
   }
 
@@ -209,14 +210,20 @@ export function ClientBriefingPanel({
               variant="outline"
               onClick={handleRefresh}
               disabled={loading}
-              className="h-8"
+              className="h-8 gap-1.5 border-primary/30 text-primary hover:bg-primary/5 hover:text-primary"
+              title="Re-run the AI briefing for this client"
             >
               {loading ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Regenerating…
+                </>
               ) : (
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                <>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Regenerate
+                </>
               )}
-              Refresh
             </Button>
           </div>
 

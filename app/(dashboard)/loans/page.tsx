@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/sheet"
 import { StatCard } from "@/components/ui/stat-card"
 import { CitationBadge, ConfidenceIndicator } from "@/components/ai/citation-badge"
-import { formatCurrency } from "@/lib/format"
+import { useFormatCurrency } from "@/lib/market-context"
 import { policies } from "@/lib/mock-data"
 import {
   Wallet,
@@ -63,6 +63,7 @@ const loanTypeIcons: Record<string, React.ElementType> = {
 export default function LoansPage() {
   const { currentUser, currentBankingUserId } = useRole()
   const { openChatWithMessage } = useFloatingChat()
+  const formatCurrency = useFormatCurrency()
   const [activeTab, setActiveTab] = useState("my-loans")
   const [selectedOffer, setSelectedOffer] = useState<LoanOffer | null>(null)
   const [simulatorAmount, setSimulatorAmount] = useState(50000)
@@ -179,13 +180,13 @@ export default function LoansPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <StatCard
                   title="Total Outstanding"
-                  value={formatCurrency(totalDebt, "AED")}
+                  value={formatCurrency(totalDebt)}
                   icon={Wallet}
                   description="Across all loans"
                 />
                 <StatCard
                   title="Monthly Payments"
-                  value={formatCurrency(monthlyPayments, "AED")}
+                  value={formatCurrency(monthlyPayments)}
                   icon={Calendar}
                   description="Due this month"
                 />
@@ -215,7 +216,7 @@ export default function LoansPage() {
                             <div className="space-y-1">
                               <h3 className="font-semibold capitalize">{loan.type.replace("_", " ")} Loan</h3>
                               <p className="text-sm text-muted-foreground">
-                                Original amount: {formatCurrency(loan.amount, "AED")}
+                                Original amount: {formatCurrency(loan.amount)}
                               </p>
                               <div className="flex items-center gap-4 mt-2 text-sm">
                                 <span>Rate: {loan.interestRate}%</span>
@@ -224,7 +225,7 @@ export default function LoansPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-2xl font-semibold">{formatCurrency(loan.remainingBalance, "AED")}</p>
+                            <p className="text-2xl font-semibold">{formatCurrency(loan.remainingBalance)}</p>
                             <p className="text-sm text-muted-foreground">remaining</p>
                             <Badge variant={loan.status === "active" ? "default" : "destructive"} className="mt-2">
                               {loan.status}
@@ -246,20 +247,20 @@ export default function LoansPage() {
                           <div>
                             <p className="text-sm text-muted-foreground">Next Payment</p>
                             <p className="font-medium">
-                              {formatCurrency(loan.monthlyPayment, "AED")} on {loan.nextPaymentDate}
+                              {formatCurrency(loan.monthlyPayment)} on {loan.nextPaymentDate}
                             </p>
                           </div>
                           <div className="flex gap-2">
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => openChatWithMessage(`Can you show me the payment schedule for my ${loan.type.replace("_", " ")} loan? The original amount was ${formatCurrency(loan.amount, "AED")}, interest rate is ${loan.interestRate}%, term is ${loan.term} months, and remaining balance is ${formatCurrency(loan.remainingBalance, "AED")}.`)}
+                              onClick={() => openChatWithMessage(`Can you show me the payment schedule for my ${loan.type.replace("_", " ")} loan? The original amount was ${formatCurrency(loan.amount)}, interest rate is ${loan.interestRate}%, term is ${loan.term} months, and remaining balance is ${formatCurrency(loan.remainingBalance)}.`)}
                             >
                               View Schedule
                             </Button>
                             <Button 
                               size="sm"
-                              onClick={() => openChatWithMessage(`I want to make a payment for my ${loan.type.replace("_", " ")} loan. The next payment is ${formatCurrency(loan.monthlyPayment, "AED")} due on ${loan.nextPaymentDate}. Remaining balance is ${formatCurrency(loan.remainingBalance, "AED")}.`)}
+                              onClick={() => openChatWithMessage(`I want to make a payment for my ${loan.type.replace("_", " ")} loan. The next payment is ${formatCurrency(loan.monthlyPayment)} due on ${loan.nextPaymentDate}. Remaining balance is ${formatCurrency(loan.remainingBalance)}.`)}
                             >
                               Make Payment
                             </Button>
@@ -304,7 +305,7 @@ export default function LoansPage() {
                             <div>
                               <CardTitle className="text-lg">{offer.name}</CardTitle>
                               <CardDescription>
-                                {formatCurrency(offer.minAmount, "AED")} - {formatCurrency(offer.maxAmount, "AED")}
+                                {formatCurrency(offer.minAmount)} - {formatCurrency(offer.maxAmount)}
                               </CardDescription>
                             </div>
                           </div>
@@ -546,7 +547,7 @@ export default function LoansPage() {
                       <div>
                         <div className="flex justify-between mb-2">
                           <Label>Loan Amount</Label>
-                          <span className="text-sm font-medium">{formatCurrency(simulatorAmount, "AED")}</span>
+                          <span className="text-sm font-medium">{formatCurrency(simulatorAmount)}</span>
                         </div>
                         <Slider
                           value={[simulatorAmount]}
@@ -590,7 +591,7 @@ export default function LoansPage() {
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Monthly Payment</span>
                         <span className="text-xl font-bold text-primary">
-                          {formatCurrency(calculateMonthlyPayment(simulatorAmount, 5.99, simulatorTerm), "AED")}
+                          {formatCurrency(calculateMonthlyPayment(simulatorAmount, 5.99, simulatorTerm))}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -599,7 +600,6 @@ export default function LoansPage() {
                           {formatCurrency(
                             calculateMonthlyPayment(simulatorAmount, 5.99, simulatorTerm) * simulatorTerm -
                               simulatorAmount,
-                            "AED",
                           )}
                         </span>
                       </div>
@@ -619,7 +619,7 @@ export default function LoansPage() {
                     <div className="p-4 rounded-lg bg-muted/50">
                       <p className="text-sm leading-relaxed">
                         Based on your financial profile, here's my assessment of a{" "}
-                        <strong>{formatCurrency(simulatorAmount, "AED")}</strong> loan over{" "}
+                        <strong>{formatCurrency(simulatorAmount)}</strong> loan over{" "}
                         <strong>{simulatorTerm} months</strong>:
                       </p>
                     </div>

@@ -1,30 +1,30 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react"
 import type { UserRole, User } from "./types"
-import { CUSTOMER_IDS } from "./customer-ids"
+import { PERSONA_IDS, type DemoRole } from "./customer-ids"
 import { users } from "./mock-data"
+import { useMarket } from "./market-context"
+import type { Market } from "./markets"
 
 interface RoleContextType {
   currentRole: UserRole
   currentUser: User
+  /**
+   * UUID used to query the **banking** Supabase project for the active
+   * persona. For retail customers this is also the call-center customer ID
+   * (we mirror them). For staff roles (RM/Risk/Admin) the banking and
+   * call-center IDs are the same — they reuse the profile UUID.
+   */
   currentBankingUserId: string
+  /**
+   * UUID used to query the **call center** Supabase project. Mirrors
+   * `currentBankingUserId` by design — the 1:1 ID convention keeps
+   * cross-DB joins straightforward.
+   */
+  currentCallCenterUserId: string
   setRole: (role: UserRole) => void
   availableRoles: { role: UserRole; label: string; user: User }[]
-}
-
-const bankingRoleUserMap: Record<UserRole, string> = {
-  retail_customer: CUSTOMER_IDS["Sarah Chen"],
-  relationship_manager: CUSTOMER_IDS["James Rodriguez"],
-  risk_compliance: CUSTOMER_IDS["David Kim"],
-  admin: CUSTOMER_IDS["System Administrator"],
-}
-
-const callCenterRoleUserMap: Record<UserRole, string> = {
-  retail_customer: "4e140685-8f38-49ff-aae0-d6109c46873d", // Sarah Chen
-  relationship_manager: "51880b1d-3935-49dd-bac6-9469d33d3ee3", // James Rodriguez
-  risk_compliance: "2be06428-7933-41f5-a426-f27478e75c1c", // David Kim
-  admin: "730b0c66-1feb-432a-9718-e3a9755eea7b", // System Administrator
 }
 
 const roleLabels: Record<UserRole, string> = {
@@ -34,26 +34,73 @@ const roleLabels: Record<UserRole, string> = {
   admin: "Admin",
 }
 
+/** UserRole values that map 1:1 to a DemoRole in PERSONA_IDS. */
+const roleToDemoRole: Record<UserRole, DemoRole> = {
+  retail_customer: "retail_customer",
+  relationship_manager: "relationship_manager",
+  risk_compliance: "risk_compliance",
+  admin: "admin",
+}
+
 const RoleContext = createContext<RoleContextType | undefined>(undefined)
 
+/** Resolve a User object for a given (market, role) tuple. */
+function resolveUser(market: Market, role: UserRole): User {
+  const id = PERSONA_IDS[market][roleToDemoRole[role]]
+  const user = users.find((u) => u.id === id)
+  if (user) return user
+  // Last-resort fallback: avoid throwing during a render, surface the issue
+  // via a synthetic placeholder. Real fix is to add the persona to mock-data.ts.
+  return {
+    id,
+    name: `Unknown ${role}`,
+    email: `${role}@unknown.local`,
+    role,
+    avatar: "/placeholder.svg",
+    createdAt: "1970-01-01",
+  } as User
+}
+
 export function RoleProvider({ children }: { children: ReactNode }) {
+  const { market } = useMarket()
   const [currentRole, setCurrentRole] = useState<UserRole>("retail_customer")
 
-  const currentUser = users.find((u) => u.id === callCenterRoleUserMap[currentRole])!
-  const currentBankingUserId = bankingRoleUserMap[currentRole]
+  const currentUser = useMemo(() => resolveUser(market, currentRole), [market, currentRole])
+  const currentBankingUserId = currentUser.id
+  // Call-center IDs mirror banking IDs by convention.
+  const currentCallCenterUserId = currentUser.id
 
   const setRole = useCallback((role: UserRole) => {
     setCurrentRole(role)
   }, [])
 
-  const availableRoles = Object.entries(callCenterRoleUserMap).map(([role, userId]) => ({
-    role: role as UserRole,
-    label: roleLabels[role as UserRole],
-    user: users.find((u) => u.id === userId)!,
-  }))
+  /**
+   * Personas surfaced in the role-switcher dropdown — always reflects the
+   * active market's persona pool, so switching market then opening the
+   * dropdown shows Wanjiru / Peter / Grace / Njeri instead of Sarah / James
+   * / David / Sysadmin (and vice-versa).
+   */
+  const availableRoles = useMemo(
+    () =>
+      (Object.keys(roleLabels) as UserRole[]).map((role) => ({
+        role,
+        label: roleLabels[role],
+        user: resolveUser(market, role),
+      })),
+    [market],
+  )
 
   return (
-    <RoleContext.Provider value={{ currentRole, currentUser, currentBankingUserId, setRole, availableRoles }}>
+    <RoleContext.Provider
+      value={{
+        currentRole,
+        currentUser,
+        currentBankingUserId,
+        currentCallCenterUserId,
+        setRole,
+        availableRoles,
+      }}
+    >
       {children}
     </RoleContext.Provider>
   )

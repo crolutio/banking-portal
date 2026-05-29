@@ -1,6 +1,8 @@
 import { streamText } from "ai"
-import { claude, isClaudeConfigured } from "@/lib/ai/claude"
+import { claudeFast, isClaudeConfigured } from "@/lib/ai/claude"
 import { createDirectClient } from "@/lib/supabase/direct-client"
+import { DEFAULT_MARKET, MARKET_CONFIG, isMarket, type Market } from "@/lib/markets"
+import { buildMarketContext } from "@/lib/ai/market-context"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -48,6 +50,7 @@ export async function POST(req: Request) {
       opportunity?: string
       channel?: Channel
       tone?: Tone
+      market?: string
     }
 
     if (!clientId || typeof clientId !== "string") {
@@ -58,6 +61,8 @@ export async function POST(req: Request) {
     }
     const ch: Channel = channel === "sms" || channel === "whatsapp" ? channel : "email"
     const tn: Tone = tone === "direct" || tone === "formal" ? tone : "warm"
+    const market: Market = isMarket(body.market) ? body.market : DEFAULT_MARKET
+    const marketCfg = MARKET_CONFIG[market]
 
     if (!isClaudeConfigured()) {
       return Response.json({ error: "Missing CLAUDE_API_KEY" }, { status: 500 })
@@ -85,14 +90,17 @@ export async function POST(req: Request) {
         .eq("customer_id", clientId),
     ])
 
+    const usdRate = marketCfg.usdToHomeRate
     const totalBalance = (accounts ?? []).reduce((s: number, a: any) => {
-      const rate = a.currency === "USD" ? 3.67 : 1
+      const rate = a.currency === "USD" ? usdRate : 1
       return s + safeNumber(a.balance) * rate
     }, 0)
 
     const firstName = profile.full_name?.split(" ")?.[0] ?? "there"
 
-    const systemPrompt = `You are an AI assistant helping a Relationship Manager (RM) at AIdeology Bank draft a personalised outreach message to one of their clients.
+    const systemPrompt = `${buildMarketContext(market)}
+
+You are an AI assistant helping a Relationship Manager (RM) at AIdeology Bank draft a personalised outreach message to one of their clients.
 
 You are drafting a ${ch.toUpperCase()} message with a ${tn.toUpperCase()} tone.
 
@@ -105,7 +113,6 @@ ${TONE_RULES[tn]}
 GENERAL RULES:
 - Reference the specific opportunity provided. Tie it to something concrete you can see in the client's data (a recent travel signal, a card, a balance, an existing product).
 - Never invent numbers, dates, or facts not in the data. If you need to reference a date, use a vague placeholder like "next week" or "soon".
-- Currency: AED with thousands separators (e.g., AED 125,000). USD only if the source data uses it.
 - Do NOT include placeholder bracketed fields like [Phone] or [Branch] — write a finished, sendable message.
 - Output ONLY the message body. No preamble like "Here is the draft:" or post-script commentary.
 
@@ -115,7 +122,7 @@ Today's date: ${new Date().toISOString().split("T")[0]}`
 - Name: ${profile.full_name}
 - First name (use this in greetings): ${firstName}
 - Segment: ${profile.segment ?? "—"}
-- Total balance: AED ${totalBalance.toLocaleString("en", { maximumFractionDigits: 0 })}
+- Total balance: ${marketCfg.currency} ${totalBalance.toLocaleString("en", { maximumFractionDigits: 0 })}
 - Active accounts: ${(accounts ?? []).length}
 - Active loans: ${(loans ?? []).filter((l: any) => l.status === "active").length}
 - Active cards: ${(cards ?? []).filter((c: any) => c.status === "active").length}
@@ -135,7 +142,9 @@ ${opportunity}
 Draft the ${ch} message now.`
 
     const result = await streamText({
-      model: claude(),
+      // Haiku 4.5 — outreach drafts stream noticeably faster; tone-shifted
+      // prose is squarely in Haiku's wheelhouse. See lib/ai/claude.ts.
+      model: claudeFast(),
       system: systemPrompt,
       prompt: userPrompt,
       temperature: 0.6,

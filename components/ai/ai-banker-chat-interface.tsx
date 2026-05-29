@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils"
 import { CitationBadge } from "@/components/ai/citation-badge"
 import { normalizeChatMessageDisplayText } from "@/lib/chat-message-format"
 import { isCustomer, useRole } from "@/lib/role-context"
+import { useMarket } from "@/lib/market-context"
 import { AIAction } from "@/lib/types"
 import { AI_AGENT_PERSONAS, type AIAgentId } from "@/lib/ai/agents"
 import { LoanApprovalCard, OptimizationResultCard, SuspiciousTransactionsCard } from "@/components/ai/special-cards"
@@ -321,6 +322,7 @@ export function AIBankerChatInterface({
   agentId = "banker"
 }: AIBankerChatInterfaceProps) {
   const { currentRole, currentUser } = useRole()
+  const { market } = useMarket()
   const theme = AI_AGENT_THEMES[agentId] ?? AI_AGENT_THEMES.banker
   const persona = AI_AGENT_PERSONAS[agentId] ?? AI_AGENT_PERSONAS.banker
   const AgentIcon = theme.icon
@@ -337,7 +339,8 @@ export function AIBankerChatInterface({
     streamProtocol: apiPath === "/api/research" ? "text" : "data",
     body: {
       userId: currentUser?.id,
-      agentId
+      agentId,
+      market,
     },
     // Removed initialMessages to avoid conflict with append
     onResponse: (response) => {

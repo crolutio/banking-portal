@@ -15,6 +15,114 @@ This guide provides step-by-step instructions for demonstrating the new AI-power
 
 ---
 
+## 🌍 Multi-Market Demo Mode (UAE / Kenya)
+
+The portal can demo two fully-populated markets in parallel:
+
+| Market    | Currency | Locale | Default? |
+| --------- | -------- | ------ | -------- |
+| `default` | AED      | en-AE  | Yes      |
+| `kenya`   | KES      | en-KE  | No       |
+
+### Where the switcher lives
+
+- **Header → top-right**, between the notification bell and the theme toggle.
+- It's a quiet Globe icon with a small country-flag overlay — visually subtle on purpose so it doesn't distract a customer-side demo. Hover tooltip reads *"Switch market"*.
+- **Visible only to RM / Risk & Compliance / Admin roles.** Customer-side demos (Sarah Chen, etc.) intentionally don't see the switcher so the live experience stays clean.
+
+### Persistence
+
+- The active market is saved to `localStorage` under the key `banking-agent-active-market`.
+- First load on a fresh browser → defaults to `default` (UAE).
+- Once you switch to Kenya, the choice persists across reloads and across role switches until you flip it back.
+- To reset: open DevTools → Application → Local Storage → clear `banking-agent-active-market`, or just click the switcher and pick `Default (UAE)` again.
+
+### How role switching interacts with markets
+
+Roles are resolved per `(market, role)`. Switching market re-resolves who you are:
+
+| Role                 | UAE persona          | Kenya persona     |
+| -------------------- | -------------------- | ----------------- |
+| Customer (retail)    | Sarah Chen           | Wanjiru Kamau     |
+| Customer (business)  | Mohammed Ali         | Otieno Ouma       |
+| Relationship Manager | James Rodriguez      | Peter Mwangi      |
+| Risk & Compliance    | David Kim            | Grace Wanjiku     |
+| Admin                | System Administrator | Njeri Otieno      |
+
+Data follows the persona — accounts, transactions, loans, support tickets, call-center conversations, the product catalog, and every AI surface (Briefing, Copilot, Portfolio Pulse, Draft Outreach, customer chat) all switch context automatically.
+
+### Seeding Kenya data on a fresh Supabase project
+
+Run these scripts **in order**. They are idempotent (`ON CONFLICT DO NOTHING` upserts), so re-running is safe.
+
+**Banking DB:**
+
+1. `scripts/add_market_column_banking.sql` — adds the `market` column + indexes to the core banking tables; back-fills existing rows with `'default'`.
+2. `scripts/patch_market_column_customers.sql` — patch for the separate `customers` table that lives in the production schema (not in local migrations).
+3. `scripts/add_market_column_extras.sql` — adds `market` to `savings_goals`, `portfolio_holdings`, `watchlist`, `risk_profiles`, `reward_profiles`, `reward_activities`, `reward_redemptions`, `reward_catalog`, **plus** a `currency` column on `portfolio_holdings` so NSE KES holdings can coexist with the legacy USD portfolio.
+4. `scripts/seed_kenya_customers_table.sql` — seeds the 2 Kenyan retail customers into `customers` (FK target for accounts).
+5. `scripts/seed_kenya_profiles.sql` — 5 Kenyan profiles (Wanjiru, Otieno, Peter, Grace, Njeri).
+6. `scripts/seed_kenya_accounts_cards.sql` — 6 accounts, 4 cards.
+7. `scripts/seed_kenya_loans.sql` — 6 loans, mix of consumer + SME.
+8. `scripts/seed_kenya_transactions.sql` — 96 transactions across KES + USD diaspora wallet + SME accounts.
+9. `scripts/seed_kenya_support.sql` — 4 tickets, 16 messages.
+10. `scripts/seed_kenya_products.sql` — 20 Kenya-flavoured products.
+11. `scripts/seed_kenya_savings_goals.sql` — 6 goals (Karen apartment deposit, emergency fund, Strathmore MBA, Mara/Diani trip for Wanjiru; SME working capital + Mombasa branch fit-out for Otieno) + 13 deposit history rows.
+12. `scripts/seed_kenya_investments.sql` — 9 NSE/T-bill/MMF holdings (Safaricom, Equity, KCB, EABL, COOP + CIC MMF for Wanjiru; GoK T-Bills + Sanlam MMF for Otieno) + 2 watchlist symbols + 2 risk profiles.
+13. `scripts/seed_kenya_rewards.sql` — 2 reward profiles (Wanjiru Gold, Otieno Platinum) + 25 reward activities (earn + redeem) + 8 Kenya-relevant catalog items (KQ Asante miles, Java House vouchers, Naivas vouchers, Mara day trip, etc.).
+
+**Call center DB:**
+
+14. `scripts/add_market_column_callcenter.sql` — column + index on `customers`, `conversations`, `messages`.
+15. `scripts/seed_kenya_callcenter_customers.sql` — 2 customers, same UUIDs as the banking-side profiles.
+16. `scripts/seed_kenya_callcenter_conversations.sql` — 6 conversations.
+17. `scripts/seed_kenya_callcenter_messages.sql` — 22 messages.
+
+If step 15 is skipped before step 16, you'll see `FK constraint "conversations_customer_id_fkey"` — run step 15 first.
+
+### Reverting / cleaning up
+
+To delete only Kenya data without touching UAE (handy on a shared demo project):
+
+```sql
+-- Banking DB
+DELETE FROM savings_goal_transactions WHERE market = 'kenya';
+DELETE FROM savings_goals             WHERE market = 'kenya';
+DELETE FROM reward_redemptions        WHERE market = 'kenya';
+DELETE FROM reward_activities         WHERE market = 'kenya';
+DELETE FROM reward_profiles           WHERE market = 'kenya';
+DELETE FROM reward_catalog            WHERE market = 'kenya';
+DELETE FROM portfolio_holdings        WHERE market = 'kenya';
+DELETE FROM watchlist                 WHERE customer_id IN (SELECT id FROM profiles WHERE market = 'kenya');
+DELETE FROM risk_profiles             WHERE market = 'kenya';
+DELETE FROM transactions              WHERE market = 'kenya';
+DELETE FROM support_messages          WHERE ticket_id IN (SELECT id FROM support_tickets WHERE market = 'kenya');
+DELETE FROM support_tickets           WHERE market = 'kenya';
+DELETE FROM loans                     WHERE market = 'kenya';
+DELETE FROM cards                     WHERE market = 'kenya';
+DELETE FROM accounts                  WHERE market = 'kenya';
+DELETE FROM profiles                  WHERE market = 'kenya';
+DELETE FROM customers                 WHERE market = 'kenya';
+DELETE FROM products                  WHERE market = 'kenya';
+
+-- Call center DB
+DELETE FROM messages       WHERE conversation_id IN (SELECT id FROM conversations WHERE market = 'kenya');
+DELETE FROM conversations  WHERE market = 'kenya';
+DELETE FROM customers      WHERE market = 'kenya';
+```
+
+### Suggested demo flow (Kenya)
+
+1. Open the portal in the RM role → confirm UAE list of clients renders (baseline).
+2. Click the Globe switcher → pick **🇰🇪 Kenya**.
+3. Page reloads itself — RM is now Peter Mwangi, the client list shows Wanjiru + Otieno, AUM tile shows KES.
+4. Click Wanjiru → 360 page shows KES balances, KES transactions (Naivas, KPLC, M-Pesa, KRA), and the AI Briefing references KES amounts and Kenyan rails.
+5. Fire any Copilot starter prompt — response talks Kenyan (M-Pesa, PesaLink, KRA, NSSF, etc.).
+6. Click *Draft Outreach* → message body references KES + Kenyan locale.
+7. Flip back to **🇦🇪 Default** in the switcher to return to the UAE narrative.
+
+---
+
 ## 🎙️ Demo 0: Voice Assistant (Retell)
 
 **Scenario**: Show the voice assistant continuing from text history.

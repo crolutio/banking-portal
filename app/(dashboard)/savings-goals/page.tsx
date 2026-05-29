@@ -48,7 +48,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
 import type { SavingsGoal, SavingsGoalCategory, Account } from "@/lib/types"
-import { formatCurrency } from "@/lib/format"
+import { useFormatCurrency, useMarket } from "@/lib/market-context"
 import { CitationBadge } from "@/components/ai/citation-badge"
 import { AskAIBankerWidget } from "@/components/ai/ask-ai-banker-widget"
 import { useRole } from "@/lib/role-context"
@@ -111,6 +111,7 @@ const goalTemplates = [
 ]
 
 function GoalCard({ goal, onAction }: { goal: SavingsGoal; onAction: (action: string, goal: SavingsGoal) => void }) {
+  const formatCurrency = useFormatCurrency()
   const Icon = categoryIcons[goal.category]
   const progress = (goal.currentAmount / goal.targetAmount) * 100
   const remaining = goal.targetAmount - goal.currentAmount
@@ -248,6 +249,8 @@ function GoalCard({ goal, onAction }: { goal: SavingsGoal; onAction: (action: st
 
 function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onOpenChange: (open: boolean) => void, accounts: Account[] }) {
   const { currentUser, currentBankingUserId } = useRole()
+  const { market, config: marketCfg } = useMarket()
+  const formatCurrency = useFormatCurrency()
   const [step, setStep] = useState(1)
   const [selectedTemplate, setSelectedTemplate] = useState<(typeof goalTemplates)[0] | null>(null)
   const [customGoal, setCustomGoal] = useState({
@@ -290,7 +293,7 @@ function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onO
           name: customGoal.name,
           category: customGoal.category,
           target_amount: customGoal.targetAmount,
-          currency: 'AED', // Default for now
+          currency: marketCfg.currency, // honour the active market
           target_date: customGoal.targetDate,
           monthly_contribution: customGoal.monthlyContribution,
           auto_debit: customGoal.autoDebit,
@@ -345,7 +348,7 @@ function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onO
                     <div className="flex-1">
                       <p className="font-medium text-sm">{template.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        ~{formatCurrency(template.suggestedAmount, "AED")}
+                        ~{formatCurrency(template.suggestedAmount)}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -412,7 +415,7 @@ function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onO
             </div>
 
             <div className="space-y-2">
-              <Label>Target Amount: {formatCurrency(customGoal.targetAmount, "AED")}</Label>
+              <Label>Target Amount: {formatCurrency(customGoal.targetAmount)}</Label>
               <Slider
                 value={[customGoal.targetAmount]}
                 onValueChange={([v]) => setCustomGoal({ ...customGoal, targetAmount: v })}
@@ -438,7 +441,7 @@ function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onO
             </div>
 
             <div className="space-y-2">
-              <Label>Monthly Contribution: {formatCurrency(customGoal.monthlyContribution, "AED")}</Label>
+              <Label>Monthly Contribution: {formatCurrency(customGoal.monthlyContribution)}</Label>
               <Slider
                 value={[customGoal.monthlyContribution]}
                 onValueChange={([v]) => setCustomGoal({ ...customGoal, monthlyContribution: v })}
@@ -505,7 +508,7 @@ function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onO
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Target Amount</p>
-                    <p className="font-semibold text-lg">{formatCurrency(customGoal.targetAmount, "AED")}</p>
+                    <p className="font-semibold text-lg">{formatCurrency(customGoal.targetAmount)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Target Date</p>
@@ -513,7 +516,7 @@ function CreateGoalDialog({ open, onOpenChange, accounts }: { open: boolean; onO
                   </div>
                   <div>
                     <p className="text-muted-foreground">Monthly Contribution</p>
-                    <p className="font-semibold">{formatCurrency(customGoal.monthlyContribution, "AED")}</p>
+                    <p className="font-semibold">{formatCurrency(customGoal.monthlyContribution)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Auto-debit</p>
@@ -571,6 +574,7 @@ function AddFundsDialog({
   onOpenChange,
   accounts
 }: { goal: SavingsGoal | null; open: boolean; onOpenChange: (open: boolean) => void; accounts: Account[] }) {
+  const formatCurrency = useFormatCurrency()
   const [amount, setAmount] = useState("")
   const [sourceAccountId, setSourceAccountId] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
@@ -671,7 +675,7 @@ function AddFundsDialog({
           <div className="flex flex-wrap gap-2">
             {quickAmounts.map((qa) => (
               <Button key={qa} variant="outline" size="sm" onClick={() => setAmount(qa.toString())}>
-                +{formatCurrency(qa, "AED")}
+                +{formatCurrency(qa)}
               </Button>
             ))}
           </div>
@@ -692,7 +696,7 @@ function AddFundsDialog({
             Cancel
           </Button>
           <Button disabled={!amount || Number(amount) <= 0 || isProcessing} onClick={handleAddFunds}>
-            {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : `Add ${amount ? formatCurrency(Number(amount), "AED") : "Funds"}`}
+            {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : `Add ${amount ? formatCurrency(Number(amount)) : "Funds"}`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -702,6 +706,7 @@ function AddFundsDialog({
 
 export default function SavingsGoalsPage() {
   const { currentUser, currentBankingUserId } = useRole()
+  const formatCurrency = useFormatCurrency()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [addFundsGoal, setAddFundsGoal] = useState<SavingsGoal | null>(null)
   const [activeTab, setActiveTab] = useState("active")
@@ -790,7 +795,7 @@ export default function SavingsGoalsPage() {
         detail: `You're saving ${formatCurrency(
           monthlyTotal,
           "AED",
-        )} per month towards a remaining target of ${formatCurrency(totalTarget, "AED")}.`,
+        )} per month towards a remaining target of ${formatCurrency(totalTarget)}.`,
       })
     }
 
@@ -904,7 +909,7 @@ export default function SavingsGoalsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Saved</p>
-                    <p className="text-xl font-bold">{formatCurrency(totalSaved, "AED")}</p>
+                    <p className="text-xl font-bold">{formatCurrency(totalSaved)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -918,7 +923,7 @@ export default function SavingsGoalsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Target</p>
-                    <p className="text-xl font-bold">{formatCurrency(totalTarget, "AED")}</p>
+                    <p className="text-xl font-bold">{formatCurrency(totalTarget)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -932,7 +937,7 @@ export default function SavingsGoalsPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Monthly Savings</p>
-                    <p className="text-xl font-bold">{formatCurrency(monthlyTotal, "AED")}</p>
+                    <p className="text-xl font-bold">{formatCurrency(monthlyTotal)}</p>
                   </div>
                 </div>
               </CardContent>

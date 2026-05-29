@@ -66,6 +66,58 @@ export const users: User[] = [
     avatar: getAvatarUrl("730b0c66-1feb-432a-9718-e3a9755eea7b"),
     createdAt: "2018-04-20",
   },
+
+  // ---------------------------------------------------------------------
+  // Kenyan personas (market = 'kenya'). Used by the role switcher when
+  // the active market is Kenya. UUIDs match the rows seeded in
+  // scripts/seed_kenya_profiles.sql + seed_kenya_customers_table.sql.
+  // ---------------------------------------------------------------------
+  {
+    id: "11ce0001-0001-4001-a001-000000000001",
+    name: "Wanjiru Kamau",
+    email: "wanjiru.kamau@email.co.ke",
+    role: "retail_customer",
+    avatar: getAvatarUrl("11ce0001-0001-4001-a001-000000000001"),
+    rmId: "11ce0003-0003-4003-a003-000000000003",
+    segment: "Premium",
+    kycStatus: "Verified",
+    createdAt: "2022-08-15",
+  },
+  {
+    id: "11ce0002-0002-4002-a002-000000000002",
+    name: "Otieno Ouma",
+    email: "otieno.ouma@email.co.ke",
+    role: "retail_customer",
+    avatar: getAvatarUrl("11ce0002-0002-4002-a002-000000000002"),
+    rmId: "11ce0003-0003-4003-a003-000000000003",
+    segment: "Premium",
+    kycStatus: "Verified",
+    createdAt: "2021-11-22",
+  },
+  {
+    id: "11ce0003-0003-4003-a003-000000000003",
+    name: "Peter Mwangi",
+    email: "peter.mwangi@bank.co.ke",
+    role: "relationship_manager",
+    avatar: getAvatarUrl("11ce0003-0003-4003-a003-000000000003"),
+    createdAt: "2020-03-01",
+  },
+  {
+    id: "11ce0004-0004-4004-a004-000000000004",
+    name: "Grace Wanjiku",
+    email: "grace.wanjiku@bank.co.ke",
+    role: "risk_compliance",
+    avatar: getAvatarUrl("11ce0004-0004-4004-a004-000000000004"),
+    createdAt: "2019-09-15",
+  },
+  {
+    id: "11ce0005-0005-4005-a005-000000000005",
+    name: "Njeri Otieno",
+    email: "njeri.otieno@bank.co.ke",
+    role: "admin",
+    avatar: getAvatarUrl("11ce0005-0005-4005-a005-000000000005"),
+    createdAt: "2018-07-20",
+  },
 ]
 
 // Accounts

@@ -14,6 +14,7 @@ import { LoanApprovalCard, OptimizationResultCard, SuspiciousTransactionsCard } 
 import { DisputeConfirmationCard } from "@/components/ai/special-cards/DisputeConfirmationCard"
 import { AI_AGENT_PERSONAS, type AIAgentId } from "@/lib/ai/agents"
 import { useRole } from "@/lib/role-context"
+import { useMarket } from "@/lib/market-context"
 import {
   Send,
   User,
@@ -560,6 +561,7 @@ export function FloatingChatBubble() {
   const pathname = usePathname()
   const { theme } = useTheme()
   const { currentUser, currentBankingUserId } = useRole()
+  const { market } = useMarket()
   const { chatState, agentId, initialMessage, closeChat, minimizeChat, normalizeChat, toggleFullscreen } = useFloatingChat()
   const persona = AI_AGENT_PERSONAS[agentId] ?? AI_AGENT_PERSONAS.banker
   const retellAgentId = process.env.NEXT_PUBLIC_RETELL_AGENT_ID
@@ -576,6 +578,7 @@ export function FloatingChatBubble() {
       userId: currentUser?.id,
       agentId,
       currentPage: pathname, // Send current page context
+      market,
     },
   })
 

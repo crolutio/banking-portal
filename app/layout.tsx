@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next"
 import { Inter, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { RoleProvider } from "@/lib/role-context"
+import { MarketProvider } from "@/lib/market-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { FloatingChatProvider } from "@/components/ai/floating-chat-context"
 import { FloatingChatBubble } from "@/components/ai/floating-chat-bubble"
@@ -56,13 +57,15 @@ export default function RootLayout({
           enableSystem={true}
           storageKey="bank-of-the-future-theme"
         >
-          <RoleProvider>
-            <FloatingChatProvider>
-              {children}
-              <FloatingChatBubble />
-              <Toaster position="top-right" richColors closeButton />
-            </FloatingChatProvider>
-          </RoleProvider>
+          <MarketProvider>
+            <RoleProvider>
+              <FloatingChatProvider>
+                {children}
+                <FloatingChatBubble />
+                <Toaster position="top-right" richColors closeButton />
+              </FloatingChatProvider>
+            </RoleProvider>
+          </MarketProvider>
           <Analytics />
         </ThemeProvider>
       </body>

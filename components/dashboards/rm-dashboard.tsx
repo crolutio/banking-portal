@@ -3,7 +3,10 @@
 import { useMemo, useState, useEffect } from "react"
 import Link from "next/link"
 import { useRole } from "@/lib/role-context"
-import { formatCurrency, formatRelativeTime } from "@/lib/format"
+import { useMarket, useFormatCurrency } from "@/lib/market-context"
+import { MARKET_CONFIG } from "@/lib/markets"
+import { byMarket } from "@/lib/market-filter"
+import { formatRelativeTime } from "@/lib/format"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,6 +19,8 @@ import type { User } from "@/lib/types"
 
 export function RMDashboard() {
   const { currentUser, currentBankingUserId } = useRole()
+  const { market } = useMarket()
+  const fmt = useFormatCurrency()
   const [clients, setClients] = useState<any[]>([])
   const [clientsLoading, setClientsLoading] = useState(true)
   const [nbaList, setNbaList] = useState<any[]>([]) // Using mock NBA for now as table doesn't exist
@@ -27,11 +32,11 @@ export function RMDashboard() {
       setClientsLoading(true)
       const supabase = createClient()
 
-      // Fetch Clients assigned to this RM
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("assigned_rm_id", currentBankingUserId)
+      // Fetch Clients assigned to this RM (scoped to active market)
+      const { data: profiles, error: profilesError } = await byMarket(
+        supabase.from("profiles").select("*"),
+        market,
+      ).eq("assigned_rm_id", currentBankingUserId)
 
       if (profilesError) {
         console.error("Error fetching clients:", profilesError)
@@ -48,11 +53,12 @@ export function RMDashboard() {
 
       if (accountsError) console.error("Error fetching client accounts:", accountsError)
 
-      // Map clients with their calculated balance
+      // Map clients with their calculated balance (market-aware USD conversion)
+      const usdRate = MARKET_CONFIG[market].usdToHomeRate
       const mappedClients = (profiles || []).map((p: any) => {
         const clientAccounts = accounts?.filter((a: any) => a.customer_id === p.id) || []
         const totalBalance = clientAccounts.reduce((sum: number, acc: any) => {
-          const rate = acc.currency === "USD" ? 3.67 : 1
+          const rate = acc.currency === "USD" ? usdRate : 1
           return sum + Number(acc.balance) * rate
         }, 0)
 
@@ -83,7 +89,7 @@ export function RMDashboard() {
     }
 
     fetchData()
-  }, [currentUser])
+  }, [currentUser, market])
 
   const portfolioValue = useMemo(() => {
     return clients.reduce((total, client) => total + client.totalBalance, 0)
@@ -114,7 +120,7 @@ export function RMDashboard() {
         <StatCard title="Portfolio Clients" value={clients.length} icon={Users} />
         <StatCard
           title="Total AUM"
-          value={formatCurrency(portfolioValue)}
+          value={fmt(portfolioValue)}
           change={5.2}
           changeLabel="MTD"
           icon={TrendingUp}
@@ -180,7 +186,7 @@ export function RMDashboard() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <p className="text-sm font-medium">{formatCurrency(client.totalBalance)}</p>
+                        <p className="text-sm font-medium">{fmt(client.totalBalance)}</p>
                         <p className="text-xs text-muted-foreground">Total Balance</p>
                       </div>
                       <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />

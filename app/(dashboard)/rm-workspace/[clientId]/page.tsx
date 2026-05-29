@@ -7,7 +7,8 @@ import { useChat } from "ai/react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { useRole } from "@/lib/role-context"
-import { formatCurrency } from "@/lib/format"
+import { useMarket, useFormatCurrency } from "@/lib/market-context"
+import { MARKET_CONFIG } from "@/lib/markets"
 import { createClient } from "@/lib/supabase/client"
 import { ClientSupportSection } from "@/components/rm/client-support-section"
 import { ClientBriefingPanel } from "@/components/rm/client-briefing-panel"
@@ -59,6 +60,8 @@ type Profile = {
 export default function Client360Page() {
   const { clientId } = useParams<{ clientId: string }>()
   const { currentRole } = useRole()
+  const { market } = useMarket()
+  const fmt = useFormatCurrency()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [accounts, setAccounts] = useState<any[]>([])
   const [cards, setCards] = useState<any[]>([])
@@ -70,7 +73,7 @@ export default function Client360Page() {
 
   const { messages, input, handleInputChange, handleSubmit, isLoading: chatLoading, append } = useChat({
     api: "/api/rm-chat",
-    body: { userId: clientId, currentPage: "/rm-workspace" },
+    body: { userId: clientId, currentPage: "/rm-workspace", market },
   })
 
   useEffect(() => {
@@ -136,8 +139,11 @@ export default function Client360Page() {
   }, [clientId])
 
   const totalBalance = useMemo(
-    () => accounts.reduce((s, a) => s + Number(a.balance) * (a.currency === "USD" ? 3.67 : 1), 0),
-    [accounts],
+    () => {
+      const usdRate = MARKET_CONFIG[market].usdToHomeRate
+      return accounts.reduce((s, a) => s + Number(a.balance) * (a.currency === "USD" ? usdRate : 1), 0)
+    },
+    [accounts, market],
   )
   const totalLiabilities = useMemo(
     () => loans.reduce((s, l) => s + Number(l.remaining_balance), 0),
@@ -256,10 +262,10 @@ export default function Client360Page() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <MetricTile label="Total Balance" value={formatCurrency(totalBalance)} />
-            <MetricTile label="Liabilities" value={formatCurrency(totalLiabilities)} />
-            <MetricTile label="Inflow (recent)" value={formatCurrency(recentCredits)} />
-            <MetricTile label="Outflow (recent)" value={formatCurrency(recentDebits)} />
+            <MetricTile label="Total Balance" value={fmt(totalBalance)} />
+            <MetricTile label="Liabilities" value={fmt(totalLiabilities)} />
+            <MetricTile label="Inflow (recent)" value={fmt(recentCredits)} />
+            <MetricTile label="Outflow (recent)" value={fmt(recentDebits)} />
             <MetricTile label="Top Spend" value={topCategory} />
           </div>
         </CardContent>
@@ -379,7 +385,7 @@ export default function Client360Page() {
                   <p className="text-xs text-muted-foreground">{a.type} · {a.account_number}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium">{formatCurrency(Number(a.balance), a.currency || "AED")}</p>
+                  <p className="text-sm font-medium">{fmt(Number(a.balance), a.currency || undefined)}</p>
                   <Badge variant="outline" className="text-[10px]">{a.status}</Badge>
                 </div>
               </div>
@@ -405,7 +411,7 @@ export default function Client360Page() {
                 <div className="text-right">
                   {c.credit_limit && (
                     <p className="text-sm font-medium">
-                      {formatCurrency(Number(c.spent_amount))} / {formatCurrency(Number(c.credit_limit))}
+                      {fmt(Number(c.spent_amount))} / {fmt(Number(c.credit_limit))}
                     </p>
                   )}
                   <Badge variant="outline" className="text-[10px]">{c.status}</Badge>
@@ -431,8 +437,8 @@ export default function Client360Page() {
                   <p className="text-xs text-muted-foreground">{l.interest_rate}% · {l.term_months} months</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium">{formatCurrency(Number(l.remaining_balance))}</p>
-                  <p className="text-xs text-muted-foreground">of {formatCurrency(Number(l.principal_amount))}</p>
+                  <p className="text-sm font-medium">{fmt(Number(l.remaining_balance))}</p>
+                  <p className="text-xs text-muted-foreground">of {fmt(Number(l.principal_amount))}</p>
                 </div>
               </div>
             ))}
@@ -461,7 +467,7 @@ export default function Client360Page() {
                   </p>
                 </div>
                 <p className={`text-sm font-medium ${tx.type === "credit" ? "text-green-600 dark:text-green-400" : ""}`}>
-                  {tx.type === "credit" ? "+" : "-"}{formatCurrency(Math.abs(Number(tx.amount)))}
+                  {tx.type === "credit" ? "+" : "-"}{fmt(Math.abs(Number(tx.amount)))}
                 </p>
               </div>
             ))}

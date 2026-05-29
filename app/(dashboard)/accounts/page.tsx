@@ -4,7 +4,8 @@ import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
 import { useRole } from "@/lib/role-context"
 import { useFloatingChat } from "@/components/ai/floating-chat-context"
-import { formatCurrency, formatAccountNumber, formatDate, getCategoryColor, getStatusColor } from "@/lib/format"
+import { formatAccountNumber, formatDate, getCategoryColor, getStatusColor } from "@/lib/format"
+import { useFormatCurrency } from "@/lib/market-context"
 import { PageHeader } from "@/components/ui/page-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -39,6 +40,7 @@ function AccountCard({
   showBalance: boolean
   onToggleBalance: () => void
 }) {
+  const formatCurrency = useFormatCurrency()
   const getAccountIcon = () => {
     switch (account.type) {
       case "savings":
@@ -99,6 +101,7 @@ function TransactionsTable({
   accounts = [],
   showFilters = true,
 }: { transactions: Transaction[]; accounts?: Account[]; showFilters?: boolean }) {
+  const formatCurrency = useFormatCurrency()
   const [searchQuery, setSearchQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
@@ -296,6 +299,7 @@ function TransactionsTable({
 
 function AccountInsightsPanel({ account, transactions }: { account: Account, transactions: Transaction[] }) {
   const { openChatWithMessage } = useFloatingChat()
+  const formatCurrency = useFormatCurrency()
   // Use passed transactions instead of fetching them
   const thisMonthSpend = transactions
     .filter((t) => {
@@ -453,6 +457,7 @@ function AccountInsightsPanel({ account, transactions }: { account: Account, tra
 export default function AccountsPage() {
   const { currentUser, currentBankingUserId } = useRole()
   const { openChatWithMessage } = useFloatingChat()
+  const formatCurrency = useFormatCurrency()
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])

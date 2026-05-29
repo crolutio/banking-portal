@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRole } from "@/lib/role-context"
+import { useMarket } from "@/lib/market-context"
+import { byMarket } from "@/lib/market-filter"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -147,11 +149,11 @@ function formatAmount(value: number | null): string {
   return value.toString()
 }
 
-function formatAmountRange(min: number | null, max: number | null): string | null {
+function formatAmountRange(min: number | null, max: number | null, ccy: string): string | null {
   if (min === null && max === null) return null
-  if (min !== null && max !== null) return `AED ${formatAmount(min)}–${formatAmount(max)}`
-  if (min !== null) return `From AED ${formatAmount(min)}`
-  if (max !== null) return `Up to AED ${formatAmount(max)}`
+  if (min !== null && max !== null) return `${ccy} ${formatAmount(min)}–${formatAmount(max)}`
+  if (min !== null) return `From ${ccy} ${formatAmount(min)}`
+  if (max !== null) return `Up to ${ccy} ${formatAmount(max)}`
   return null
 }
 
@@ -167,6 +169,7 @@ function groupByCategory(products: Product[]) {
 
 export default function ProductsPage() {
   const { currentRole } = useRole()
+  const { market } = useMarket()
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
@@ -174,18 +177,21 @@ export default function ProductsPage() {
 
   useEffect(() => {
     async function load() {
+      setLoading(true)
       const supabase = createClient()
-      const { data } = await supabase
-        .from("products")
-        .select(
-          "id, name, description, category, icon, tagline, min_amount, max_amount, rate_pct, term_label, key_features, target_segment",
-        )
-        .order("name")
+      const { data } = await byMarket(
+        supabase
+          .from("products")
+          .select(
+            "id, name, description, category, icon, tagline, min_amount, max_amount, rate_pct, term_label, key_features, target_segment",
+          ),
+        market,
+      ).order("name")
       setProducts((data ?? []) as Product[])
       setLoading(false)
     }
     load()
-  }, [])
+  }, [market])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return products
@@ -318,8 +324,9 @@ function ProductCard({
   expanded: boolean
   onToggle: () => void
 }) {
+  const { config: marketCfg } = useMarket()
   const Icon = resolveIcon(product.icon)
-  const amountRange = formatAmountRange(product.min_amount, product.max_amount)
+  const amountRange = formatAmountRange(product.min_amount, product.max_amount, marketCfg.currency)
   const hasMetrics = product.rate_pct !== null || amountRange || product.term_label
 
   return (

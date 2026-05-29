@@ -1,6 +1,8 @@
 import { streamText, type CoreMessage } from "ai"
-import { claude, isClaudeConfigured } from "@/lib/ai/claude"
+import { claudeFast, isClaudeConfigured } from "@/lib/ai/claude"
 import { createDirectClient } from "@/lib/supabase/direct-client"
+import { DEFAULT_MARKET, MARKET_CONFIG, isMarket, type Market } from "@/lib/markets"
+import { buildMarketContext } from "@/lib/ai/market-context"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -61,7 +63,10 @@ async function fetchCallCenterData(clientId: string) {
 
 export async function POST(req: Request) {
   try {
-    const { messages, userId } = await req.json()
+    const body = await req.json()
+    const { messages, userId } = body
+    const market: Market = isMarket(body.market) ? body.market : DEFAULT_MARKET
+    const marketCfg = MARKET_CONFIG[market]
 
     if (!isClaudeConfigured()) {
       return new Response("Missing CLAUDE_API_KEY", { status: 500 })
@@ -119,17 +124,20 @@ export async function POST(req: Request) {
 
     const conversationsWithMessages = await fetchCallCenterData(userId)
 
+    // Catalog is a list-read — scope to the active market so recommendations are local.
     const { data: products } = await supabase
       .from("products")
       .select("name, category, tagline, description, target_segment, rate_pct, term_label")
+      .eq("market", market)
     const productCatalog = products ?? []
 
     const toNumber = (v: any) => {
       const n = Number(v)
       return Number.isFinite(n) ? n : 0
     }
+    const usdRate = marketCfg.usdToHomeRate
     const totalBalance = accounts.reduce((s: number, a: any) => {
-      const rate = a.currency === "USD" ? 3.67 : 1
+      const rate = a.currency === "USD" ? usdRate : 1
       return s + toNumber(a.balance) * rate
     }, 0)
     const totalLiabilities = loans.reduce(
@@ -137,7 +145,9 @@ export async function POST(req: Request) {
       0,
     )
 
-    const systemPrompt = `You are an intelligent advisor assisting a Relationship Manager (RM) at AIdeology Bank. You help the RM prepare for client meetings, identify opportunities, and make data-driven recommendations.
+    const systemPrompt = `${buildMarketContext(market)}
+
+You are an intelligent advisor assisting a Relationship Manager (RM) at AIdeology Bank. You help the RM prepare for client meetings, identify opportunities, and make data-driven recommendations.
 
 You are NOT a customer-facing chatbot. You speak to the RM as a knowledgeable colleague — professional, analytical, and action-oriented. Reference specific data points, numbers, and product names.
 
@@ -149,8 +159,8 @@ CLIENT PROFILE:
 - Client Since: ${profile.created_at ? new Date(profile.created_at).toLocaleDateString() : "Unknown"}
 
 FINANCIAL SUMMARY:
-- Total Balance: AED ${totalBalance.toLocaleString("en", { minimumFractionDigits: 2 })}
-- Total Liabilities: AED ${totalLiabilities.toLocaleString("en", { minimumFractionDigits: 2 })}
+- Total Balance: ${marketCfg.currency} ${totalBalance.toLocaleString("en", { minimumFractionDigits: 2 })}
+- Total Liabilities: ${marketCfg.currency} ${totalLiabilities.toLocaleString("en", { minimumFractionDigits: 2 })}
 - Accounts: ${accounts.length}
 - Cards: ${cards.length}
 - Active Loans: ${loans.length}
@@ -191,7 +201,6 @@ GUIDELINES:
 - Answer based ONLY on the provided data. Do not fabricate information.
 - When recommending products, cite specific product names, rates, and eligibility from the catalog.
 - When discussing client history, reference specific conversations, ticket subjects, and message content.
-- Format currency as AED (e.g., AED 1,250.00). USD-denominated accounts may show USD.
 - Use **bold** for emphasis. Use numbered lists for action items. Use markdown tables when comparing options.
 - Be concise and actionable. The RM is busy.
 - Current Date: ${new Date().toISOString().split("T")[0]}
@@ -205,7 +214,9 @@ GUIDELINES:
       }))
 
     const result = await streamText({
-      model: claude(),
+      // Haiku 4.5 — faster TTFT + token rate for the RM Copilot stream.
+      // See lib/ai/claude.ts for the rationale on the model split.
+      model: claudeFast(),
       system: systemPrompt,
       messages: recentMessages,
       temperature: 0.5,

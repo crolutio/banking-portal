@@ -4,7 +4,8 @@ import { useMemo, useEffect, useState } from "react"
 import Link from "next/link"
 import { useFloatingChat } from "@/components/ai/floating-chat-context"
 import { useRole } from "@/lib/role-context"
-import { formatCurrency, formatDate, getCategoryColor } from "@/lib/format"
+import { useFormatCurrency } from "@/lib/market-context"
+import { formatDate, getCategoryColor } from "@/lib/format"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,6 +29,7 @@ import type { Account, Transaction, Card as CardType, Loan, TransactionCategory 
 
 export function CustomerDashboard() {
   const { currentUser, currentBankingUserId } = useRole()
+  const formatCurrency = useFormatCurrency()
   const { openChatWithMessage } = useFloatingChat()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [transactions, setTransactions] = useState<Transaction[]>([])

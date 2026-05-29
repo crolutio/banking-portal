@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { useMarket } from "@/lib/market-context"
+import { writeCachedBriefing } from "@/lib/rm/briefing-cache"
+import type { BriefingResponse } from "@/lib/rm/client-briefings"
 
 type Urgency = "high" | "medium" | "low"
 
@@ -60,9 +63,14 @@ const URGENCY_META: Record<
   },
 }
 
-const REQUEST_TIMEOUT_MS = 30_000
+// Pulse now runs 3 parallel briefings server-side, each ~3–10s for clients
+// with rich ticket/call-center history. 45s ceiling absorbs the worst case
+// (slow Anthropic response + cold Supabase) without ever leaving the loader
+// spinning forever.
+const REQUEST_TIMEOUT_MS = 45_000
 
 export function PortfolioPulseRow({ rmId }: { rmId: string }) {
+  const { market } = useMarket()
   const [items, setItems] = useState<PulseItem[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,13 +92,30 @@ export function PortfolioPulseRow({ rmId }: { rmId: string }) {
         const res = await fetch("/api/rm-portfolio-pulse", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rmId }),
+          body: JSON.stringify({ rmId, market }),
           signal: controller.signal,
         })
         if (!res.ok) throw new Error(`Pulse API returned ${res.status}`)
-        const data = (await res.json()) as { items: PulseItem[] }
+        const data = (await res.json()) as {
+          items: PulseItem[]
+          briefings?: Record<string, BriefingResponse>
+        }
         if (cancelled) return
         setItems(data.items ?? [])
+
+        // Pre-warm the briefing cache for the top-3 clients so the per-client
+        // briefing card opens instantly when the RM clicks in. The Pulse API
+        // generates these briefings to source its blurbs (`main_concern`),
+        // and shipping them back here for caching is a free UX win.
+        if (data.briefings) {
+          for (const [clientId, briefing] of Object.entries(data.briefings)) {
+            try {
+              writeCachedBriefing(clientId, briefing, market)
+            } catch {
+              // Cache writes are best-effort.
+            }
+          }
+        }
       } catch (err: any) {
         if (cancelled) return
         // Component-unmount / StrictMode re-run aborts are not real failures.
@@ -110,7 +135,7 @@ export function PortfolioPulseRow({ rmId }: { rmId: string }) {
       controller.abort()
       clearTimeout(timer)
     }
-  }, [rmId])
+  }, [rmId, market])
 
   return (
     <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">

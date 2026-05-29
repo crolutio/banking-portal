@@ -58,6 +58,7 @@ import {
   CalendarDays,
 } from "lucide-react"
 import { DemoHelpTooltip } from "@/components/layout/demo-help-tooltip"
+import { MarketSwitcher } from "@/components/market-switcher"
 
 interface NavItem {
   label: string
@@ -408,6 +409,10 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
 function Topbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  // Market switcher is visible to every role so that a demo presenter can flip
+  // between UAE and Kenya from any surface, including the retail-customer
+  // dashboard. The component itself is intentionally subtle (Globe + small
+  // flag) so it doesn't distract from the live customer experience.
 
   // Avoid hydration mismatch by rendering interactive elements only on client
   useEffect(() => {
@@ -484,6 +489,7 @@ function Topbar() {
           <DemoHelpTooltip />
         </div>
         <NotificationBell />
+        <MarketSwitcher />
         <ThemeToggle />
         <RoleSwitcher />
       </div>

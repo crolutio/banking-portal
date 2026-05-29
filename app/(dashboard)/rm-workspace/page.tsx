@@ -3,7 +3,9 @@
 import { useMemo, useState, useEffect } from "react"
 import Link from "next/link"
 import { useRole } from "@/lib/role-context"
-import { formatCurrency, formatRelativeTime } from "@/lib/format"
+import { useMarket, useFormatCurrency } from "@/lib/market-context"
+import { MARKET_CONFIG } from "@/lib/markets"
+import { byMarket } from "@/lib/market-filter"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -63,6 +65,8 @@ type NBA = {
 
 export default function RMWorkspacePage() {
   const { currentRole, currentBankingUserId } = useRole()
+  const { market } = useMarket()
+  const fmt = useFormatCurrency()
   const [clients, setClients] = useState<ClientData[]>([])
   const [alerts, setAlerts] = useState<RiskAlert[]>([])
   const [tickets, setTickets] = useState<SupportTicket[]>([])
@@ -75,11 +79,11 @@ export default function RMWorkspacePage() {
       setLoading(true)
       const supabase = createClient()
 
-      console.log("[RM Dashboard] Fetching clients for RM:", currentBankingUserId)
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("assigned_rm_id", currentBankingUserId)
+      console.log("[RM Dashboard] Fetching clients for RM:", currentBankingUserId, "market:", market)
+      const { data: profiles, error: profilesError } = await byMarket(
+        supabase.from("profiles").select("*"),
+        market,
+      ).eq("assigned_rm_id", currentBankingUserId)
 
       console.log("[RM Dashboard] Profiles result:", profiles?.length, "clients found", profilesError ? `Error: ${profilesError.message}` : "")
       if (profiles) {
@@ -104,10 +108,13 @@ export default function RMWorkspacePage() {
       setAlerts(alertsRes.data || [])
       setTickets(ticketsRes.data || [])
 
+      // Use the active market's USD→home rate so AUM rollups make sense
+      // in KES when on Kenya, in AED on UAE, etc.
+      const usdRate = MARKET_CONFIG[market].usdToHomeRate
       const mapped: ClientData[] = profiles.map((p: any) => {
         const clientAccounts = accounts.filter((a: any) => a.customer_id === p.id)
         const totalBalance = clientAccounts.reduce((sum: number, acc: any) => {
-          const rate = acc.currency === "USD" ? 3.67 : 1
+          const rate = acc.currency === "USD" ? usdRate : 1
           return sum + Number(acc.balance) * rate
         }, 0)
         return {
@@ -124,7 +131,7 @@ export default function RMWorkspacePage() {
 
       const briefings: Record<string, BriefingResponse> = {}
       for (const c of mapped) {
-        const cached = readCachedBriefing(c.id)
+        const cached = readCachedBriefing(c.id, market)
         if (cached) briefings[c.id] = cached
       }
       setCachedBriefings(briefings)
@@ -132,7 +139,7 @@ export default function RMWorkspacePage() {
       setLoading(false)
     }
     fetchData()
-  }, [currentBankingUserId])
+  }, [currentBankingUserId, market])
 
   const portfolioValue = useMemo(() => clients.reduce((t, c) => t + c.totalBalance, 0), [clients])
   const atRiskClients = useMemo(() => clients.filter((c) => c.segment === "At Risk"), [clients])
@@ -197,7 +204,7 @@ export default function RMWorkspacePage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Portfolio Clients" value={clients.length} icon={Users} />
-        <StatCard title="Total AUM" value={formatCurrency(portfolioValue)} icon={TrendingUp} />
+        <StatCard title="Total AUM" value={fmt(portfolioValue)} icon={TrendingUp} />
         <StatCard title="At-Risk Clients" value={atRiskClients.length} icon={AlertCircle} />
         <StatCard title="Pending Actions" value={nbaList.length} icon={Target} />
       </div>
@@ -255,7 +262,7 @@ export default function RMWorkspacePage() {
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
-                        <p className="text-sm font-medium">{formatCurrency(client.totalBalance)}</p>
+                        <p className="text-sm font-medium">{fmt(client.totalBalance)}</p>
                         <p className="text-xs text-muted-foreground">Total Balance</p>
                       </div>
                       <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />

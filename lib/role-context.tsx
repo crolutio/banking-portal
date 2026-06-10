@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react"
+import { createContext, useContext, useCallback, useMemo, type ReactNode } from "react"
 import type { UserRole, User } from "./types"
 import { PERSONA_IDS, type DemoRole } from "./customer-ids"
 import { users } from "./mock-data"
@@ -63,16 +63,17 @@ function resolveUser(market: Market, role: UserRole): User {
 
 export function RoleProvider({ children }: { children: ReactNode }) {
   const { market } = useMarket()
-  const [currentRole, setCurrentRole] = useState<UserRole>("retail_customer")
+  // RM-only build: the role is locked to relationship_manager. The persona
+  // switcher and the other dashboards are not exposed on this branch.
+  const currentRole: UserRole = "relationship_manager"
 
   const currentUser = useMemo(() => resolveUser(market, currentRole), [market, currentRole])
   const currentBankingUserId = currentUser.id
   // Call-center IDs mirror banking IDs by convention.
   const currentCallCenterUserId = currentUser.id
 
-  const setRole = useCallback((role: UserRole) => {
-    setCurrentRole(role)
-  }, [])
+  // No-op: role is locked to RM on this build.
+  const setRole = useCallback((_role: UserRole) => {}, [])
 
   /**
    * Personas surfaced in the role-switcher dropdown — always reflects the

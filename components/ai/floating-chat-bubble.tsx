@@ -737,6 +737,12 @@ export function FloatingChatBubble() {
     previousStateRef.current = chatState
   }, [chatState])
 
+  // The RM workspace has its own AI surfaces (briefing, draft outreach, chat),
+  // so the customer-facing floating bubble is hidden there for now.
+  if (pathname?.startsWith("/rm-workspace")) {
+    return null
+  }
+
   // Determine minimize animation based on previous state
   const getMinimizeAnimation = () => {
     const prevState = previousStateRef.current

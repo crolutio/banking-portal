@@ -90,3 +90,10 @@ Thumbs.db
 .python-version
 banking_db_schema.csv
 callCenter_db_schema.csv
+banking_db_constraints.csv
+callCenter_db_constraints.csv
+
+# Generated Atlas voice artifacts (regenerate via scripts/_print_book_context.mjs)
+scripts/atlas-book.json
+scripts/atlas-book.prompt.txt
+scripts/atlas-system-prompt.txt

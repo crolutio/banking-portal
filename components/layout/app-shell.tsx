@@ -56,9 +56,12 @@ import {
   LayoutDashboard,
   AlertTriangle,
   CalendarDays,
+  Sparkles,
+  Radar,
+  SlidersHorizontal,
+  Bot,
 } from "lucide-react"
 import { DemoHelpTooltip } from "@/components/layout/demo-help-tooltip"
-import { MarketSwitcher } from "@/components/market-switcher"
 
 interface NavItem {
   label: string
@@ -84,7 +87,12 @@ const navItems: NavItem[] = [
 ]
 
 const rmNavItems: NavItem[] = [
-  { label: "Dashboard", href: "/rm-workspace", icon: LayoutDashboard },
+  { label: "Today", href: "/rm-workspace", icon: Sparkles },
+  { label: "Atlas", href: "/rm-workspace/atlas", icon: Bot },
+  { label: "Day Plan", href: "/rm-workspace/plan", icon: CalendarDays },
+  { label: "Clients", href: "/rm-workspace/clients", icon: Users },
+  { label: "Retention", href: "/rm-workspace/retention", icon: Radar },
+  { label: "Focus", href: "/rm-workspace/focus", icon: SlidersHorizontal },
   { label: "Products", href: "/rm-workspace/products", icon: Store },
   { label: "Risk & Compliance", href: "/risk-compliance", icon: ShieldAlert, roles: ["risk_compliance", "admin"] },
   { label: "Admin Console", href: "/admin", icon: Settings, roles: ["admin"] },
@@ -375,7 +383,9 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
 
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {filteredNavItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/rm-workspace" && pathname.startsWith(item.href + "/"))
           const Icon = item.icon
 
           return (
@@ -489,7 +499,6 @@ function Topbar() {
           <DemoHelpTooltip />
         </div>
         <NotificationBell />
-        <MarketSwitcher />
         <ThemeToggle />
         <RoleSwitcher />
       </div>

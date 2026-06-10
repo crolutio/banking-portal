@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useEffect, useMemo, useState, useRef } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
@@ -12,6 +13,7 @@ import { MARKET_CONFIG } from "@/lib/markets"
 import { createClient } from "@/lib/supabase/client"
 import { ClientSupportSection } from "@/components/rm/client-support-section"
 import { ClientBriefingPanel } from "@/components/rm/client-briefing-panel"
+import { DraftOutreachButton } from "@/components/rm/draft-outreach-button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
@@ -20,13 +22,18 @@ import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   ArrowLeft,
+  ArrowDownLeft,
+  ArrowUpRight,
   Bot,
   CreditCard,
   Landmark,
   Loader2,
+  Mail,
   MessageSquare,
+  Phone,
   Shield,
   Sparkles,
+  Tag,
   Wallet,
   ReceiptText,
 } from "lucide-react"
@@ -258,15 +265,34 @@ export default function Client360Page() {
                 </div>
               </div>
             </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button asChild variant="outline" size="sm">
+                <a href={profile.phone ? `tel:${profile.phone}` : undefined}>
+                  <Phone className="h-3.5 w-3.5" /> Call
+                </a>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <a href={`mailto:${profile.email}`}>
+                  <Mail className="h-3.5 w-3.5" /> Email
+                </a>
+              </Button>
+              <DraftOutreachButton
+                clientId={clientId}
+                clientName={profile.full_name}
+                opportunity={`Proactive relationship review for ${profile.full_name}`}
+                label="Draft Outreach"
+                variant="default"
+              />
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <MetricTile label="Total Balance" value={fmt(totalBalance)} />
-            <MetricTile label="Liabilities" value={fmt(totalLiabilities)} />
-            <MetricTile label="Inflow (recent)" value={fmt(recentCredits)} />
-            <MetricTile label="Outflow (recent)" value={fmt(recentDebits)} />
-            <MetricTile label="Top Spend" value={topCategory} />
+            <MetricTile label="Total Balance" value={fmt(totalBalance)} icon={Wallet} tone="primary" />
+            <MetricTile label="Liabilities" value={fmt(totalLiabilities)} icon={Landmark} tone="warning" />
+            <MetricTile label="Inflow (recent)" value={fmt(recentCredits)} icon={ArrowDownLeft} tone="positive" />
+            <MetricTile label="Outflow (recent)" value={fmt(recentDebits)} icon={ArrowUpRight} tone="negative" />
+            <MetricTile label="Top Spend" value={topCategory} icon={Tag} tone="neutral" />
           </div>
         </CardContent>
       </Card>
@@ -279,7 +305,7 @@ export default function Client360Page() {
           </TabsTrigger>
           <TabsTrigger value="copilot">
             <MessageSquare className="h-3.5 w-3.5" />
-            Ask Copilot
+            Ask Atlas
             {messages.length > 0 && (
               <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">
                 {messages.length}
@@ -296,7 +322,7 @@ export default function Client360Page() {
           <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Bot className="h-4 w-4 text-primary" /> Relationship Copilot
+                <Bot className="h-4 w-4 text-primary" /> Ask Atlas
               </CardTitle>
               <CardDescription>
                 Ask follow-up questions about <strong>{profile.full_name}</strong> — financials, support history, and product recommendations.
@@ -336,7 +362,7 @@ export default function Client360Page() {
                   {messages.map((msg) => (
                     <div key={msg.id} className={`text-sm ${msg.role === "user" ? "font-medium" : ""}`}>
                       <span className="text-xs uppercase tracking-wide text-muted-foreground block mb-1">
-                        {msg.role === "user" ? "You" : "Copilot"}
+                        {msg.role === "user" ? "You" : "Atlas"}
                       </span>
                       {msg.role === "user" ? (
                         <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -480,11 +506,35 @@ export default function Client360Page() {
   )
 }
 
-function MetricTile({ label, value }: { label: string; value: string }) {
+function MetricTile({
+  label,
+  value,
+  icon: Icon,
+  tone = "neutral",
+}: {
+  label: string
+  value: string
+  icon?: React.ElementType
+  tone?: "primary" | "positive" | "negative" | "warning" | "neutral"
+}) {
+  const toneStyles: Record<string, string> = {
+    primary: "bg-primary/10 text-primary",
+    positive: "bg-green-500/10 text-green-600 dark:text-green-400",
+    negative: "bg-red-500/10 text-red-600 dark:text-red-400",
+    warning: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+    neutral: "bg-muted text-muted-foreground",
+  }
   return (
     <div className="rounded-lg border p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-semibold mt-1">{value}</p>
+      <div className="flex items-center gap-2">
+        {Icon && (
+          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${toneStyles[tone]}`}>
+            <Icon className="h-3.5 w-3.5" />
+          </span>
+        )}
+        <p className="text-xs text-muted-foreground">{label}</p>
+      </div>
+      <p className="font-semibold mt-2">{value}</p>
     </div>
   )
 }

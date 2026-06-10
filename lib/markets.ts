@@ -66,8 +66,13 @@ export const MARKET_CONFIG: Record<Market, MarketConfig> = {
   },
 }
 
-/** Default market when no preference has been persisted. */
-export const DEFAULT_MARKET: Market = "default"
+/**
+ * Default (and currently only) market. The demo runs Kenya-only — the market
+ * switcher has been removed from the UI, so every session resolves to Kenyan
+ * personas (Wanjiru, Peter Mwangi, etc.) in KES. The `default`/UAE config is
+ * retained in the registry but is no longer selectable.
+ */
+export const DEFAULT_MARKET: Market = "kenya"
 
 /**
  * localStorage key reserved for the active market.

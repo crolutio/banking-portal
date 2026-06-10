@@ -11,7 +11,15 @@ interface StatCardProps {
   description?: string
   trend?: { value: number; direction: "up" | "down" }
   icon?: React.ElementType
+  accent?: "primary" | "positive" | "negative" | "warning"
   className?: string
+}
+
+const ACCENT_STYLES: Record<string, string> = {
+  primary: "bg-primary/10 text-primary",
+  positive: "bg-green-500/10 text-green-600 dark:text-green-400",
+  negative: "bg-red-500/10 text-red-600 dark:text-red-400",
+  warning: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
 }
 
 export function StatCard({
@@ -22,6 +30,7 @@ export function StatCard({
   description,
   trend,
   icon: Icon,
+  accent,
   className,
 }: StatCardProps) {
   const effectiveChange = trend?.value ?? change
@@ -44,7 +53,14 @@ export function StatCard({
     <Card className={cn("bg-card", className)}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+        {Icon &&
+          (accent ? (
+            <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", ACCENT_STYLES[accent])}>
+              <Icon className="h-4 w-4" />
+            </span>
+          ) : (
+            <Icon className="h-4 w-4 text-muted-foreground" />
+          ))}
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold text-foreground">{value}</div>

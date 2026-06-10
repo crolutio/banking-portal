@@ -41,14 +41,11 @@ const MarketContext = createContext<MarketContextValue | undefined>(undefined)
  * Top-level provider that keeps the active market in sync across the app.
  *
  * Persistence model — by design:
- *   - Every full page load (browser refresh, dev-server restart, fresh tab)
- *     starts on DEFAULT_MARKET (UAE). This keeps demos reproducible: the
- *     presenter always opens to the canonical Sarah Chen / James Rodriguez
- *     story and chooses when to switch to Kenya.
- *   - Within a single session, the market switcher updates React state and
- *     persists across SPA navigation (because the provider stays mounted),
- *     but is intentionally NOT written to localStorage. A hard refresh
- *     resets to UAE.
+ *   - The demo is Kenya-only. Every page load resolves to DEFAULT_MARKET
+ *     (Kenya) and the market switcher has been removed from the UI, so the
+ *     app always opens to the Kenyan personas (Wanjiru / Peter Mwangi, KES).
+ *   - `setMarket` remains available (the registry still holds the UAE config)
+ *     but is no longer wired to any UI control.
  *   - `isHydrated` flips true on first client-side mount so components can
  *     guard against SSR-only UI (e.g. flag emoji) without flashing.
  */

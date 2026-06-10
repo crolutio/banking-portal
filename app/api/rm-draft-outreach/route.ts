@@ -3,6 +3,7 @@ import { claudeFast, isClaudeConfigured } from "@/lib/ai/claude"
 import { createDirectClient } from "@/lib/supabase/direct-client"
 import { DEFAULT_MARKET, MARKET_CONFIG, isMarket, type Market } from "@/lib/markets"
 import { buildMarketContext } from "@/lib/ai/market-context"
+import { buildFocusDirective, type FocusInput } from "@/lib/ai/focus-directive"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -63,6 +64,7 @@ export async function POST(req: Request) {
     const tn: Tone = tone === "direct" || tone === "formal" ? tone : "warm"
     const market: Market = isMarket(body.market) ? body.market : DEFAULT_MARKET
     const marketCfg = MARKET_CONFIG[market]
+    const focusDirective = buildFocusDirective(body.focus as FocusInput | undefined)
 
     if (!isClaudeConfigured()) {
       return Response.json({ error: "Missing CLAUDE_API_KEY" }, { status: 500 })
@@ -99,7 +101,7 @@ export async function POST(req: Request) {
     const firstName = profile.full_name?.split(" ")?.[0] ?? "there"
 
     const systemPrompt = `${buildMarketContext(market)}
-
+${focusDirective ? `\n${focusDirective}\n` : ""}
 You are an AI assistant helping a Relationship Manager (RM) at AIdeology Bank draft a personalised outreach message to one of their clients.
 
 You are drafting a ${ch.toUpperCase()} message with a ${tn.toUpperCase()} tone.
@@ -112,6 +114,7 @@ ${TONE_RULES[tn]}
 
 GENERAL RULES:
 - Reference the specific opportunity provided. Tie it to something concrete you can see in the client's data (a recent travel signal, a card, a balance, an existing product).
+- Where it fits naturally, angle the message to this week's RM focus (above) — but the specific opportunity is the priority; never force the focus if it doesn't fit this client.
 - Never invent numbers, dates, or facts not in the data. If you need to reference a date, use a vague placeholder like "next week" or "soon".
 - Do NOT include placeholder bracketed fields like [Phone] or [Branch] — write a finished, sendable message.
 - Output ONLY the message body. No preamble like "Here is the draft:" or post-script commentary.

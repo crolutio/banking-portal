@@ -1,178 +1,65 @@
 "use client"
 
-import { useMemo, useState, useEffect } from "react"
+import { useMemo } from "react"
 import Link from "next/link"
 import { useRole } from "@/lib/role-context"
 import { useMarket, useFormatCurrency } from "@/lib/market-context"
-import { MARKET_CONFIG } from "@/lib/markets"
-import { byMarket } from "@/lib/market-filter"
+import { useRmPortfolio, focusScore, CATEGORY_META, churnBand } from "@/lib/rm/use-portfolio"
+import type { EnrichedClient } from "@/lib/rm/use-portfolio"
+import { useFocus, FOCUS_PRIORITY_META, type FocusPriority } from "@/lib/rm/focus"
 import { PageHeader } from "@/components/ui/page-header"
 import { StatCard } from "@/components/ui/stat-card"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { PortfolioPulseRow } from "@/components/rm/portfolio-pulse-row"
+import { DraftOutreachButton } from "@/components/rm/draft-outreach-button"
+import { MorningBriefing } from "@/components/rm/morning-briefing"
 import {
   Users,
   TrendingUp,
   AlertCircle,
-  ArrowRight,
   Target,
   Loader2,
   Shield,
-  ShieldAlert,
+  ArrowRight,
+  Sparkles,
+  Phone,
+  Flame,
 } from "lucide-react"
-import { createClient } from "@/lib/supabase/client"
-import { PortfolioPulseRow } from "@/components/rm/portfolio-pulse-row"
-import { readCachedBriefing } from "@/lib/rm/briefing-cache"
-import type { BriefingResponse } from "@/lib/rm/client-briefings"
 
-type ClientData = {
-  id: string
-  name: string
-  email: string
-  avatar: string | null
-  segment: string
-  totalBalance: number
+const PRIORITY_ORDER: FocusPriority[] = ["balanced", "sme", "hnw", "churn", "dormant"]
+
+function actionFor(c: EnrichedClient): string {
+  if (c.churnSignals.some((s) => s.source === "call" || s.source === "ticket"))
+    return "Retention call — address the open issue"
+  if (c.churnScore >= 60) return "Urgent: reach out before they leave"
+  if (c.category === "SME") return "Offer working-capital / cash management"
+  if (c.category === "HNW") return "Wealth review — put idle cash to work"
+  if (c.openTickets > 0) return "Follow up on open request"
+  return "Proactive relationship check-in"
 }
 
-type RiskAlert = {
-  id: string
-  user_id: string
-  type: string
-  severity: string
-  title: string
-  description: string
-  status: string
+function actionPriority(c: EnrichedClient): "high" | "medium" | "low" {
+  if (c.churnScore >= 60) return "high"
+  if (c.churnScore >= 30 || c.openTickets > 0) return "medium"
+  return "low"
 }
 
-type SupportTicket = {
-  id: string
-  user_id: string
-  subject: string
-  status: string
-  priority: string
-}
-
-type NBA = {
-  id: string
-  clientId: string
-  clientName: string
-  action: string
-  reason: string
-  priority: "high" | "medium" | "low"
-}
-
-export default function RMWorkspacePage() {
+export default function RMTodayPage() {
   const { currentRole, currentBankingUserId } = useRole()
   const { market } = useMarket()
   const fmt = useFormatCurrency()
-  const [clients, setClients] = useState<ClientData[]>([])
-  const [alerts, setAlerts] = useState<RiskAlert[]>([])
-  const [tickets, setTickets] = useState<SupportTicket[]>([])
-  const [loading, setLoading] = useState(true)
-  const [cachedBriefings, setCachedBriefings] = useState<Record<string, BriefingResponse>>({})
+  const [focus, setFocus] = useFocus()
+  const { clients, loading, totals } = useRmPortfolio(currentBankingUserId, market)
 
-  useEffect(() => {
-    async function fetchData() {
-      if (!currentBankingUserId) return
-      setLoading(true)
-      const supabase = createClient()
-
-      console.log("[RM Dashboard] Fetching clients for RM:", currentBankingUserId, "market:", market)
-      const { data: profiles, error: profilesError } = await byMarket(
-        supabase.from("profiles").select("*"),
-        market,
-      ).eq("assigned_rm_id", currentBankingUserId)
-
-      console.log("[RM Dashboard] Profiles result:", profiles?.length, "clients found", profilesError ? `Error: ${profilesError.message}` : "")
-      if (profiles) {
-        profiles.forEach((p: any) => console.log("[RM Dashboard] Client:", p.id, p.full_name))
-      }
-
-      if (!profiles || profiles.length === 0) {
-        setClients([])
-        setLoading(false)
-        return
-      }
-
-      const clientIds = profiles.map((p: any) => p.id)
-
-      const [accountsRes, alertsRes, ticketsRes] = await Promise.all([
-        supabase.from("accounts").select("customer_id, balance, currency").in("customer_id", clientIds),
-        supabase.from("risk_alerts").select("*").in("user_id", clientIds).neq("status", "resolved"),
-        supabase.from("support_tickets").select("*").in("user_id", clientIds).in("status", ["open", "in_progress"]),
-      ])
-
-      const accounts = accountsRes.data || []
-      setAlerts(alertsRes.data || [])
-      setTickets(ticketsRes.data || [])
-
-      // Use the active market's USD→home rate so AUM rollups make sense
-      // in KES when on Kenya, in AED on UAE, etc.
-      const usdRate = MARKET_CONFIG[market].usdToHomeRate
-      const mapped: ClientData[] = profiles.map((p: any) => {
-        const clientAccounts = accounts.filter((a: any) => a.customer_id === p.id)
-        const totalBalance = clientAccounts.reduce((sum: number, acc: any) => {
-          const rate = acc.currency === "USD" ? usdRate : 1
-          return sum + Number(acc.balance) * rate
-        }, 0)
-        return {
-          id: p.id,
-          name: p.full_name,
-          email: p.email,
-          avatar: p.avatar_url,
-          segment: p.segment || "Standard",
-          totalBalance,
-        }
-      })
-
-      setClients(mapped)
-
-      const briefings: Record<string, BriefingResponse> = {}
-      for (const c of mapped) {
-        const cached = readCachedBriefing(c.id, market)
-        if (cached) briefings[c.id] = cached
-      }
-      setCachedBriefings(briefings)
-
-      setLoading(false)
-    }
-    fetchData()
-  }, [currentBankingUserId, market])
-
-  const portfolioValue = useMemo(() => clients.reduce((t, c) => t + c.totalBalance, 0), [clients])
-  const atRiskClients = useMemo(() => clients.filter((c) => c.segment === "At Risk"), [clients])
-
-  const nbaList = useMemo<NBA[]>(() => {
-    const actions: NBA[] = []
-    for (const alert of alerts) {
-      const client = clients.find((c) => c.id === alert.user_id)
-      if (!client) continue
-      actions.push({
-        id: `alert-${alert.id}`,
-        clientId: client.id,
-        clientName: client.name,
-        action: alert.severity === "critical" ? `Urgent: ${alert.title}` : alert.title,
-        reason: alert.description || `${alert.severity} ${alert.type} alert`,
-        priority: alert.severity === "critical" ? "high" : alert.severity === "high" ? "high" : "medium",
-      })
-    }
-    for (const ticket of tickets) {
-      const client = clients.find((c) => c.id === ticket.user_id)
-      if (!client) continue
-      actions.push({
-        id: `ticket-${ticket.id}`,
-        clientId: client.id,
-        clientName: client.name,
-        action: `Follow up: ${ticket.subject}`,
-        reason: `${ticket.priority} priority ticket — ${ticket.status}`,
-        priority: ticket.priority === "high" || ticket.priority === "urgent" ? "high" : "medium",
-      })
-    }
-    const rank = { high: 0, medium: 1, low: 2 }
-    return actions.sort((a, b) => rank[a.priority] - rank[b.priority])
-  }, [alerts, tickets, clients])
+  const ranked = useMemo(
+    () => [...clients].sort((a, b) => focusScore(b, focus) - focusScore(a, focus)),
+    [clients, focus],
+  )
+  const top3 = useMemo(() => ranked.slice(0, 3), [ranked])
+  const queue = useMemo(() => ranked.slice(3, 9), [ranked])
 
   if (currentRole !== "relationship_manager") {
     return (
@@ -181,9 +68,7 @@ export default function RMWorkspacePage() {
           <CardContent className="pt-6 text-center">
             <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h2 className="text-xl font-semibold mb-2">Access Restricted</h2>
-            <p className="text-muted-foreground">
-              The RM Workspace is only available to Relationship Manager users.
-            </p>
+            <p className="text-muted-foreground">The RM Workspace is only available to Relationship Manager users.</p>
           </CardContent>
         </Card>
       </div>
@@ -200,163 +85,297 @@ export default function RMWorkspacePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="RM Workspace" description="Your clients, portfolio, and next actions at a glance" />
+      <PageHeader title="Today" description="Your most pressing client work, ranked for you." />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Portfolio Clients" value={clients.length} icon={Users} />
-        <StatCard title="Total AUM" value={fmt(portfolioValue)} icon={TrendingUp} />
-        <StatCard title="At-Risk Clients" value={atRiskClients.length} icon={AlertCircle} />
-        <StatCard title="Pending Actions" value={nbaList.length} icon={Target} />
+      {/* Focus banner */}
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
+        <CardContent className="flex flex-col gap-3 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2 text-sm">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-muted-foreground">This week's focus:</span>
+            <span className="font-semibold">{FOCUS_PRIORITY_META[focus.priority].label}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {PRIORITY_ORDER.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setFocus({ priority: p })}
+                className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                  focus.priority === p
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted/50"
+                }`}
+              >
+                {FOCUS_PRIORITY_META[p].label}
+              </button>
+            ))}
+            <Link href="/rm-workspace/focus" className="ml-1 text-xs text-muted-foreground underline-offset-2 hover:underline">
+              more
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Brief me — auto-generates on load */}
+      <MorningBriefing clients={ranked} focus={focus} focusLabel={FOCUS_PRIORITY_META[focus.priority].label} />
+
+      {/* Top 3 priorities */}
+      {top3.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Flame className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Top priorities today
+            </h2>
+          </div>
+          <PriorityHero client={top3[0]} rank={1} fmt={fmt} autoDraft={focus.autoDraft} />
+          {top3.length > 1 && (
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {top3.slice(1).map((c, i) => (
+                <PriorityMini key={c.id} client={c} rank={i + 2} fmt={fmt} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Stat cards — framed around money */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard title="Portfolio Clients" value={totals.count} icon={Users} accent="primary" />
+        <StatCard title="Total AUM" value={fmt(totals.aum)} icon={TrendingUp} accent="positive" />
+        <StatCard
+          title="AUM at Risk"
+          value={fmt(totals.aumAtRiskValue)}
+          icon={AlertCircle}
+          accent="negative"
+          description={`${totals.atRisk} client${totals.atRisk === 1 ? "" : "s"} flagged`}
+        />
+        <StatCard
+          title="Open Opportunity"
+          value={fmt(totals.opportunity)}
+          icon={Target}
+          accent="warning"
+          description={`${totals.openActions} open action${totals.openActions === 1 ? "" : "s"}`}
+        />
       </div>
 
+      {/* AI Portfolio Pulse */}
       {currentBankingUserId && <PortfolioPulseRow rmId={currentBankingUserId} />}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">My Clients</CardTitle>
-              <CardDescription>Assigned client portfolio</CardDescription>
+      {/* Action queue */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Target className="h-4 w-4 text-primary" /> Your action queue
+          </CardTitle>
+          <Link href="/rm-workspace/clients" className="text-xs text-muted-foreground hover:text-foreground">
+            View all clients →
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {queue.map((c) => {
+              const pr = actionPriority(c)
+              const band = churnBand(c.churnScore)
+              return (
+                <Link
+                  key={c.id}
+                  href={`/rm-workspace/${c.id}`}
+                  className="group flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/40"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Avatar className="h-9 w-9 shrink-0">
+                      <AvatarFallback className="bg-primary/15 text-primary text-xs font-semibold">
+                        {c.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium">{c.name}</p>
+                        <Badge variant="secondary" className={`text-[10px] ${CATEGORY_META[c.category].className}`}>
+                          {CATEGORY_META[c.category].label}
+                        </Badge>
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {actionFor(c)} ·{" "}
+                        {c.churnScore >= 40
+                          ? `${fmt(c.aumAtRiskValue)} at risk`
+                          : `${fmt(c.opportunityValue)} opportunity`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    {c.churnScore >= 40 && (
+                      <span className={`hidden text-xs font-medium sm:inline ${band.className}`}>churn {c.churnScore}</span>
+                    )}
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] ${
+                        pr === "high"
+                          ? "border-red-500/50 text-red-600 dark:text-red-400"
+                          : pr === "medium"
+                            ? "border-yellow-500/50 text-yellow-600 dark:text-yellow-400"
+                            : "border-border text-muted-foreground"
+                      }`}
+                    >
+                      {pr}
+                    </Badge>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  </div>
+                </Link>
+              )
+            })}
+            {queue.length === 0 && (
+              <div className="py-6 text-center text-sm text-muted-foreground">No clients in your portfolio yet.</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+function PriorityHero({
+  client,
+  rank = 1,
+  fmt,
+  autoDraft,
+}: {
+  client: EnrichedClient
+  rank?: number
+  fmt: (n: number) => string
+  autoDraft: boolean
+}) {
+  const band = churnBand(client.churnScore)
+  const cat = CATEGORY_META[client.category]
+  return (
+    <Card className="overflow-hidden border-primary/30">
+      <div className="bg-primary/10 px-5 py-2 text-xs font-semibold uppercase tracking-wide text-primary">
+        <span className="inline-flex items-center gap-1.5">
+          <Flame className="h-3.5 w-3.5" /> #{rank} priority right now
+        </span>
+      </div>
+      <CardContent className="flex flex-col gap-4 py-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-start gap-4">
+          <Avatar className="h-14 w-14 shrink-0">
+            <AvatarFallback className="bg-primary/15 text-primary text-lg font-semibold">
+              {client.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-semibold">{client.name}</h2>
+              <Badge variant="secondary" className={`text-[10px] ${cat.className}`}>
+                {cat.label}
+              </Badge>
+              {client.churnScore >= 40 && (
+                <span className={`inline-flex items-center gap-1 text-xs font-medium ${band.className}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${band.dot}`} /> {band.label} · {client.churnScore}
+                </span>
+              )}
+              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+                {client.churnScore >= 40
+                  ? `≈ ${fmt(client.aumAtRiskValue)} at risk`
+                  : `≈ ${fmt(client.opportunityValue)} opportunity`}
+              </span>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {clients.map((client) => {
-                const cachedConcern = cachedBriefings[client.id]?.main_concern
-                return (
-                  <Link
-                    key={client.id}
-                    href={`/rm-workspace/${client.id}`}
-                    className="flex items-start justify-between p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors group"
-                  >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <Avatar className="h-10 w-10 mt-0.5">
-                        <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
-                          {client.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium">{client.name}</p>
-                          <Badge
-                            variant="secondary"
-                            className={`text-[10px] ${
-                              client.segment === "VIP" || client.segment === "Premium"
-                                ? "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
-                                : client.segment === "At Risk"
-                                  ? "bg-red-500/20 text-red-600 dark:text-red-400"
-                                  : "bg-muted"
-                            }`}
-                          >
-                            {client.segment}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">{client.email}</p>
-                        {cachedConcern && (
-                          <div className="mt-1 flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
-                            <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
-                            <span className="line-clamp-1">{cachedConcern}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <div className="text-right">
-                        <p className="text-sm font-medium">{fmt(client.totalBalance)}</p>
-                        <p className="text-xs text-muted-foreground">Total Balance</p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </Link>
-                )
-              })}
-              {clients.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No clients assigned to your portfolio.
-                </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {client.topConcern ?? `${cat.label} client · ${fmt(client.totalBalance)} balance`}
+            </p>
+            <p className="mt-0.5 text-sm font-medium">{actionFor(client)}</p>
+            {autoDraft && (
+              <p className="mt-1.5 inline-flex items-center gap-1 text-xs text-primary">
+                <Sparkles className="h-3 w-3" /> Outreach already drafted for you
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {client.phone && (
+            <Button asChild variant="outline" size="sm">
+              <a href={`tel:${client.phone}`}>
+                <Phone className="h-3.5 w-3.5" /> Call
+              </a>
+            </Button>
+          )}
+          <DraftOutreachButton
+            clientId={client.id}
+            clientName={client.name}
+            opportunity={client.topConcern ?? actionFor(client)}
+          />
+          <Button asChild size="sm">
+            <Link href={`/rm-workspace/${client.id}`}>
+              Open 360 <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function PriorityMini({
+  client,
+  rank,
+  fmt,
+}: {
+  client: EnrichedClient
+  rank: number
+  fmt: (n: number) => string
+}) {
+  const band = churnBand(client.churnScore)
+  const cat = CATEGORY_META[client.category]
+  const atRisk = client.churnScore >= 40
+  return (
+    <Card className="flex h-full flex-col">
+      <CardContent className="flex flex-1 flex-col gap-3 py-4">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+            {rank}
+          </span>
+          <Avatar className="h-10 w-10 shrink-0">
+            <AvatarFallback className="bg-primary/15 text-primary text-sm font-semibold">
+              {client.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <p className="truncate text-sm font-semibold">{client.name}</p>
+              <Badge variant="secondary" className={`text-[10px] ${cat.className}`}>
+                {cat.label}
+              </Badge>
+              {atRisk && (
+                <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${band.className}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${band.dot}`} /> {client.churnScore}
+                </span>
               )}
             </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-primary" />
-                <CardTitle className="text-lg">Next Best Actions</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {nbaList.slice(0, 6).map((nba) => (
-                  <Link
-                    key={nba.id}
-                    href={`/rm-workspace/${nba.clientId}`}
-                    className="block p-3 rounded-lg bg-muted/30 border border-border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-muted-foreground">{nba.clientName}</span>
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] ${
-                          nba.priority === "high"
-                            ? "border-red-500/50 text-red-600 dark:text-red-400"
-                            : "border-yellow-500/50 text-yellow-600 dark:text-yellow-400"
-                        }`}
-                      >
-                        {nba.priority}
-                      </Badge>
-                    </div>
-                    <p className="text-sm font-medium">{nba.action}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{nba.reason}</p>
-                  </Link>
-                ))}
-                {nbaList.length === 0 && (
-                  <div className="text-center py-4 text-sm text-muted-foreground">No pending actions</div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {alerts.length > 0 && (
-            <Card className="border-yellow-500/30 bg-yellow-500/5">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <ShieldAlert className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                  <CardTitle className="text-sm text-yellow-600 dark:text-yellow-400">Portfolio Alerts</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {alerts.slice(0, 4).map((alert) => {
-                    const client = clients.find((c) => c.id === alert.user_id)
-                    return (
-                      <div key={alert.id} className="flex items-start gap-2 text-sm">
-                        <Badge
-                          variant="outline"
-                          className={`text-[9px] mt-0.5 shrink-0 ${
-                            alert.severity === "critical"
-                              ? "border-red-500/50 text-red-600 dark:text-red-400"
-                              : "border-yellow-500/50 text-yellow-600 dark:text-yellow-400"
-                          }`}
-                        >
-                          {alert.severity}
-                        </Badge>
-                        <div className="min-w-0">
-                          <p className="text-sm truncate">{alert.title}</p>
-                          <p className="text-xs text-muted-foreground">{client?.name}</p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
+            <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+              {client.topConcern ?? `${cat.label} client · ${fmt(client.totalBalance)} balance`}
+            </p>
+            <p className="mt-1 text-xs font-medium">{actionFor(client)}</p>
+          </div>
         </div>
-      </div>
-    </div>
+        <div className="mt-auto flex items-center justify-between gap-2">
+          <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium">
+            {atRisk ? `≈ ${fmt(client.aumAtRiskValue)} at risk` : `≈ ${fmt(client.opportunityValue)} opportunity`}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <DraftOutreachButton
+              clientId={client.id}
+              clientName={client.name}
+              opportunity={client.topConcern ?? actionFor(client)}
+              label="Draft"
+            />
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/rm-workspace/${client.id}`}>
+                Open <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

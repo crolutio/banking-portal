@@ -93,7 +93,7 @@ const MOHAMMED_FALLBACK: BriefingResponse = {
 
 const GENERIC_FALLBACK: BriefingResponse = {
   briefing:
-    "Live AI briefing is currently unavailable. Use the data sections below to review this client's accounts, cards, loans, transactions, and support history. The Relationship Copilot at the bottom of the page can still answer specific questions.",
+    "Live AI briefing is currently unavailable. Use the data sections below to review this client's accounts, cards, loans, transactions, and support history. The Ask Atlas panel at the bottom of the page can still answer specific questions.",
   main_concern: "Briefing unavailable — please retry.",
   next_best_action: "Click Refresh to attempt the AI briefing again.",
   opportunity: "Browse the product catalog to surface tailored recommendations.",

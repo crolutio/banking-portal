@@ -4,13 +4,15 @@ import { useEffect } from "react"
 import { driver, type Config } from "driver.js"
 import "driver.js/dist/driver.css"
 
-const SEEN_KEY = "rm-demo-tour-seen-v1"
 const REPLAY_EVENT = "rm:start-tour"
 
 const TOUR_CONFIG: Config = {
   showProgress: true,
   smoothScroll: true,
   allowClose: true,
+  // Show a Close (✕) button on every popover, alongside Back/Next, so the
+  // tour can always be exited. ESC and clicking the overlay also dismiss it.
+  showButtons: ["next", "previous", "close"],
   overlayColor: "rgba(2, 6, 23, 0.6)",
   nextBtnText: "Next",
   prevBtnText: "Back",
@@ -92,9 +94,10 @@ const TOUR_CONFIG: Config = {
 
 /**
  * Embedded demo onboarding: a guided step-by-step tour highlighting the RM
- * workspace. Auto-runs once per browser (desktop only — it points at the
+ * workspace. Auto-runs on every page load (desktop only — it points at the
  * persistent sidebar), and replays on the `rm:start-tour` window event (fired
- * by the topbar's "?" button). Mounted once inside the app shell.
+ * by the topbar's help button). Always exitable via the ✕ button, ESC, or by
+ * clicking the overlay. Mounted once inside the app shell.
  */
 export function DemoTour() {
   useEffect(() => {
@@ -105,13 +108,12 @@ export function DemoTour() {
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
       const isDesktop = window.matchMedia("(min-width: 1024px)").matches
-      if (isDesktop && !localStorage.getItem(SEEN_KEY)) {
-        localStorage.setItem(SEEN_KEY, "1")
+      if (isDesktop) {
         // Let the sidebar mount before highlighting it.
         timer = setTimeout(run, 400)
       }
     } catch {
-      // localStorage/matchMedia unavailable — skip auto-start.
+      // matchMedia unavailable — skip auto-start.
     }
 
     return () => {

@@ -443,13 +443,15 @@ function Topbar() {
 
       <div className="flex items-center gap-2">
         <Button
-          variant="ghost"
-          size="icon"
+          variant="outline"
+          size="sm"
           onClick={startDemoTour}
-          title="How this demo works"
-          aria-label="Demo guide"
+          title="Start the guided tour"
+          aria-label="Start the guided tour"
+          className="gap-1.5 border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
         >
-          <HelpCircle className="h-5 w-5" />
+          <HelpCircle className="h-4 w-4" />
+          <span className="hidden sm:inline">Need help? Take the tour</span>
         </Button>
         <NotificationBell />
         <ThemeToggle />

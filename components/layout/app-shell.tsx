@@ -61,7 +61,7 @@ import {
   SlidersHorizontal,
   Bot,
 } from "lucide-react"
-import { DemoHelpTooltip } from "@/components/layout/demo-help-tooltip"
+import { DemoTour, startDemoTour } from "@/components/layout/demo-tour"
 
 interface NavItem {
   label: string
@@ -346,6 +346,7 @@ function Sidebar({ className, onClose }: { className?: string; onClose?: () => v
             <Link
               key={item.label}
               href={item.href}
+              data-tour={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
                 isActive
@@ -389,11 +390,6 @@ function Topbar() {
       <header className="sticky top-0 z-40 flex items-center justify-between h-16 px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-4 flex-1">
           <div className="w-9 h-9 lg:hidden" /> {/* Placeholder for menu button */}
-          <div className="hidden lg:flex items-center gap-4 flex-1">
-            <div className="flex-1 flex justify-center">
-              <DemoHelpTooltip />
-            </div>
-          </div>
         </div>
       </header>
     )
@@ -442,16 +438,19 @@ function Topbar() {
           >
             <Plus className="h-4 w-4" />
           </Button>
-          <div className="flex-1 flex justify-center">
-            <DemoHelpTooltip />
-          </div>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="lg:hidden">
-          <DemoHelpTooltip />
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={startDemoTour}
+          title="How this demo works"
+          aria-label="Demo guide"
+        >
+          <HelpCircle className="h-5 w-5" />
+        </Button>
         <NotificationBell />
         <ThemeToggle />
         <RoleSwitcher />
@@ -468,6 +467,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Topbar />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
       </div>
+      <DemoTour />
     </div>
   )
 }

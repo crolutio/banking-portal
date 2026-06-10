@@ -26,6 +26,26 @@ const SUGGESTIONS = [
   "Who is dormant and worth reactivating?",
 ]
 
+interface TranscriptTurn {
+  id: string
+  role: "user" | "ai"
+  text: string
+}
+
+/**
+ * Strip spoken audio tags like [warmly] / [checking] from Atlas's transcript
+ * text — they're TTS directions, not content. Leaves markdown links
+ * ([label](url)) intact and drops a trailing unclosed "[tag" while streaming.
+ */
+function stripAudioTags(text: string): string {
+  return text
+    .replace(/\[[^\]]*\](?!\()/g, "")
+    .replace(/\[[^\]]*$/g, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ +([.,!?;:])/g, "$1")
+    .trimStart()
+}
+
 export default function RMAtlasPage() {
   const { currentRole } = useRole()
 
@@ -62,6 +82,9 @@ function AtlasWorkspace() {
   const [focus] = useFocus()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [starting, setStarting] = useState(false)
+  const [transcript, setTranscript] = useState<TranscriptTurn[]>([])
+  const turnSeq = useRef(0)
+  const aiTurnRef = useRef<string | null>(null)
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, append, stop, setMessages } = useChat({
     api: "/api/rm-atlas",
@@ -82,6 +105,49 @@ function AtlasWorkspace() {
 
   const conversation = useConversation({
     onError: (message: string) => toast.error("Atlas voice error", { description: message }),
+    // Live transcript: user utterances (finalized per turn) + Atlas's reply
+    // (streamed token-by-token via onAgentChatResponsePart, finalized by onMessage).
+    onMessage: ({ message, source }: { message: string; source: "user" | "ai" }) => {
+      if (!message) return
+      if (source === "user") {
+        const id = `t${turnSeq.current++}`
+        const streamingAi = aiTurnRef.current
+        if (streamingAi) {
+          // Atlas began replying before the user's transcript finalized — keep
+          // its (streaming) bubble last and slot the user line in just above it,
+          // so order stays You → Atlas.
+          setTranscript((prev) => {
+            const idx = prev.findIndex((t) => t.id === streamingAi)
+            if (idx === -1) return [...prev, { id, role: "user", text: message }]
+            const copy = prev.slice()
+            copy.splice(idx, 0, { id, role: "user", text: message })
+            return copy
+          })
+        } else {
+          setTranscript((prev) => [...prev, { id, role: "user", text: message }])
+        }
+      } else {
+        const streamingId = aiTurnRef.current
+        aiTurnRef.current = null
+        if (streamingId) {
+          setTranscript((prev) => prev.map((t) => (t.id === streamingId ? { ...t, text: message } : t)))
+        } else {
+          const id = `t${turnSeq.current++}`
+          setTranscript((prev) => [...prev, { id, role: "ai", text: message }])
+        }
+      }
+    },
+    onAgentChatResponsePart: ({ text }: { text: string }) => {
+      if (!text) return
+      if (!aiTurnRef.current) {
+        const id = `t${turnSeq.current++}`
+        aiTurnRef.current = id
+        setTranscript((prev) => [...prev, { id, role: "ai", text }])
+      } else {
+        const id = aiTurnRef.current
+        setTranscript((prev) => prev.map((t) => (t.id === id ? { ...t, text: t.text + text } : t)))
+      }
+    },
   })
   const voiceStatus = conversation.status
   const voiceActive = starting || voiceStatus === "connecting" || voiceStatus === "connected"
@@ -96,6 +162,8 @@ function AtlasWorkspace() {
       return
     }
     setStarting(true)
+    setTranscript([])
+    aiTurnRef.current = null
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true })
       // Public agent + static book in the prompt → no per-call data fetch.
@@ -121,6 +189,7 @@ function AtlasWorkspace() {
         <VoicePanel
           connecting={starting || voiceStatus === "connecting"}
           speaking={conversation.isSpeaking}
+          transcript={transcript}
           onEnd={() => conversation.endSession()}
         />
       ) : (
@@ -234,16 +303,25 @@ function AtlasWorkspace() {
 function VoicePanel({
   connecting,
   speaking,
+  transcript,
   onEnd,
 }: {
   connecting: boolean
   speaking: boolean
+  transcript: TranscriptTurn[]
   onEnd: () => void
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    // Pin to the bottom as the conversation grows (instant — keeps up with streaming).
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [transcript])
+
   const statusText = connecting ? "Connecting to Atlas…" : speaking ? "Atlas is speaking…" : "Listening…"
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-7 p-6">
-      <div className="relative flex h-64 w-64 items-center justify-center">
+    <div className="flex min-h-0 flex-1 flex-col items-center gap-4 p-4">
+      <div className="relative mt-1 flex h-36 w-36 shrink-0 items-center justify-center">
         <div
           className={`absolute inset-0 rounded-full blur-[2px] animate-[spin_7s_linear_infinite] transition-transform duration-700 ${
             speaking ? "scale-105" : connecting ? "scale-95 opacity-80" : "scale-100"
@@ -262,16 +340,52 @@ function VoicePanel({
           type="button"
           onClick={onEnd}
           title="End voice"
-          className="relative z-10 flex h-16 w-16 items-center justify-center rounded-full bg-black text-white shadow-xl transition-transform hover:scale-105 active:scale-95"
+          className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-black text-white shadow-xl transition-transform hover:scale-105 active:scale-95"
         >
-          {connecting ? <Loader2 className="h-6 w-6 animate-spin" /> : <Phone className="h-6 w-6" />}
+          {connecting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Phone className="h-5 w-5" />}
         </button>
       </div>
 
-      <div className="text-center">
-        <p className="text-sm font-medium">{statusText}</p>
-        <p className="mt-1 text-xs text-muted-foreground">Tap the button to end · voice by ElevenLabs</p>
+      <p className="text-sm font-medium">{statusText}</p>
+
+      {/* Live transcript */}
+      <div
+        ref={scrollRef}
+        className="w-full max-w-2xl min-h-0 flex-1 overflow-y-auto rounded-xl border bg-muted/20 p-3"
+      >
+        {transcript.length === 0 ? (
+          <p className="py-8 text-center text-xs text-muted-foreground">
+            Your conversation will appear here as you talk…
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {transcript.map((turn) => (
+              <div key={turn.id} className={`flex ${turn.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={
+                    turn.role === "user"
+                      ? "max-w-[80%] rounded-2xl bg-primary px-3 py-2 text-sm text-primary-foreground"
+                      : "max-w-[85%] rounded-2xl border bg-background px-3 py-2 text-sm"
+                  }
+                >
+                  <span className="mb-0.5 block text-[10px] font-semibold uppercase tracking-wide opacity-60">
+                    {turn.role === "user" ? "You" : "Atlas"}
+                  </span>
+                  {turn.role === "ai" ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-headings:my-1 prose-table:text-xs prose-th:px-2 prose-th:py-1 prose-td:px-2 prose-td:py-1 prose-table:border prose-th:border prose-td:border">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{stripAudioTags(turn.text)}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{turn.text}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+
+      <p className="text-xs text-muted-foreground">Tap the orb to end · voice by ElevenLabs</p>
     </div>
   )
 }

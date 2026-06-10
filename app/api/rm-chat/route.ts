@@ -214,7 +214,7 @@ GUIDELINES:
       }))
 
     const result = await streamText({
-      // Haiku 4.5 — faster TTFT + token rate for the RM Copilot stream.
+      // Haiku 4.5 — faster TTFT + token rate for the Atlas chat stream.
       // See lib/ai/claude.ts for the rationale on the model split.
       model: claudeFast(),
       system: systemPrompt,

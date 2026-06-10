@@ -26,6 +26,7 @@ import {
   ArrowUpRight,
   Bot,
   CreditCard,
+  Headphones,
   Landmark,
   Loader2,
   Mail,
@@ -303,7 +304,7 @@ export default function Client360Page() {
             <Sparkles className="h-3.5 w-3.5" />
             AI Briefing
           </TabsTrigger>
-          <TabsTrigger value="copilot">
+          <TabsTrigger value="atlas">
             <MessageSquare className="h-3.5 w-3.5" />
             Ask Atlas
             {messages.length > 0 && (
@@ -312,13 +313,33 @@ export default function Client360Page() {
               </Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="accounts">
+            <Wallet className="h-3.5 w-3.5" />
+            Accounts ({accounts.length})
+          </TabsTrigger>
+          <TabsTrigger value="loans">
+            <Landmark className="h-3.5 w-3.5" />
+            Loans ({loans.length})
+          </TabsTrigger>
+          <TabsTrigger value="cards">
+            <CreditCard className="h-3.5 w-3.5" />
+            Cards ({cards.length})
+          </TabsTrigger>
+          <TabsTrigger value="transactions">
+            <ReceiptText className="h-3.5 w-3.5" />
+            Transactions ({transactions.length})
+          </TabsTrigger>
+          <TabsTrigger value="support">
+            <Headphones className="h-3.5 w-3.5" />
+            Support
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="briefing">
           <ClientBriefingPanel clientId={clientId} clientName={profile.full_name} />
         </TabsContent>
 
-        <TabsContent value="copilot">
+        <TabsContent value="atlas">
           <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
@@ -393,114 +414,123 @@ export default function Client360Page() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Accounts */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Wallet className="h-4 w-4 text-primary" /> Accounts ({accounts.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {accounts.map((a) => (
-              <div key={a.id} className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{a.name}</p>
-                  <p className="text-xs text-muted-foreground">{a.type} · {a.account_number}</p>
+        <TabsContent value="accounts">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Wallet className="h-4 w-4 text-primary" /> Accounts ({accounts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {accounts.map((a) => (
+                <div key={a.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <p className="text-sm font-medium">{a.name}</p>
+                    <p className="text-xs text-muted-foreground">{a.type} · {a.account_number}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{fmt(Number(a.balance), a.currency || undefined)}</p>
+                    <Badge variant="outline" className="text-[10px]">{a.status}</Badge>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">{fmt(Number(a.balance), a.currency || undefined)}</p>
-                  <Badge variant="outline" className="text-[10px]">{a.status}</Badge>
-                </div>
-              </div>
-            ))}
-            {accounts.length === 0 && <p className="text-sm text-muted-foreground">No accounts found</p>}
-          </CardContent>
-        </Card>
-
-        {/* Cards */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CreditCard className="h-4 w-4 text-primary" /> Cards ({cards.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {cards.map((c) => (
-              <div key={c.id} className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{c.cardholder_name}</p>
-                  <p className="text-xs text-muted-foreground">{c.brand} ·· {c.last_four} · {c.type}</p>
-                </div>
-                <div className="text-right">
-                  {c.credit_limit && (
-                    <p className="text-sm font-medium">
-                      {fmt(Number(c.spent_amount))} / {fmt(Number(c.credit_limit))}
-                    </p>
-                  )}
-                  <Badge variant="outline" className="text-[10px]">{c.status}</Badge>
-                </div>
-              </div>
-            ))}
-            {cards.length === 0 && <p className="text-sm text-muted-foreground">No cards found</p>}
-          </CardContent>
-        </Card>
+              ))}
+              {accounts.length === 0 && <p className="text-sm text-muted-foreground">No accounts found</p>}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Loans */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Landmark className="h-4 w-4 text-primary" /> Loans ({loans.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {loans.map((l) => (
-              <div key={l.id} className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">{l.type}</p>
-                  <p className="text-xs text-muted-foreground">{l.interest_rate}% · {l.term_months} months</p>
+        <TabsContent value="loans">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Landmark className="h-4 w-4 text-primary" /> Loans ({loans.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {loans.map((l) => (
+                <div key={l.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <p className="text-sm font-medium">{l.type}</p>
+                    <p className="text-xs text-muted-foreground">{l.interest_rate}% · {l.term_months} months</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{fmt(Number(l.remaining_balance))}</p>
+                    <p className="text-xs text-muted-foreground">of {fmt(Number(l.principal_amount))}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">{fmt(Number(l.remaining_balance))}</p>
-                  <p className="text-xs text-muted-foreground">of {fmt(Number(l.principal_amount))}</p>
-                </div>
-              </div>
-            ))}
-            {loans.length === 0 && <p className="text-sm text-muted-foreground">No loans found</p>}
-          </CardContent>
-        </Card>
+              ))}
+              {loans.length === 0 && <p className="text-sm text-muted-foreground">No loans found</p>}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <ClientSupportSection clientId={clientId} clientName={profile.full_name} />
-      </div>
-
-      {/* Recent Transactions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <ReceiptText className="h-4 w-4 text-primary" /> Recent Transactions ({transactions.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {transactions.slice(0, 15).map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between py-2 border-b last:border-0">
-                <div>
-                  <p className="text-sm font-medium">{tx.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(tx.date).toLocaleDateString()} · {tx.category}
-                  </p>
+        {/* Cards */}
+        <TabsContent value="cards">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CreditCard className="h-4 w-4 text-primary" /> Cards ({cards.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {cards.map((c) => (
+                <div key={c.id} className="flex items-center justify-between rounded-lg border p-3">
+                  <div>
+                    <p className="text-sm font-medium">{c.cardholder_name}</p>
+                    <p className="text-xs text-muted-foreground">{c.brand} ·· {c.last_four} · {c.type}</p>
+                  </div>
+                  <div className="text-right">
+                    {c.credit_limit && (
+                      <p className="text-sm font-medium">
+                        {fmt(Number(c.spent_amount))} / {fmt(Number(c.credit_limit))}
+                      </p>
+                    )}
+                    <Badge variant="outline" className="text-[10px]">{c.status}</Badge>
+                  </div>
                 </div>
-                <p className={`text-sm font-medium ${tx.type === "credit" ? "text-green-600 dark:text-green-400" : ""}`}>
-                  {tx.type === "credit" ? "+" : "-"}{fmt(Math.abs(Number(tx.amount)))}
-                </p>
+              ))}
+              {cards.length === 0 && <p className="text-sm text-muted-foreground">No cards found</p>}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Recent Transactions */}
+        <TabsContent value="transactions">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ReceiptText className="h-4 w-4 text-primary" /> Recent Transactions ({transactions.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {transactions.slice(0, 15).map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                    <div>
+                      <p className="text-sm font-medium">{tx.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(tx.date).toLocaleDateString()} · {tx.category}
+                      </p>
+                    </div>
+                    <p className={`text-sm font-medium ${tx.type === "credit" ? "text-green-600 dark:text-green-400" : ""}`}>
+                      {tx.type === "credit" ? "+" : "-"}{fmt(Math.abs(Number(tx.amount)))}
+                    </p>
+                  </div>
+                ))}
+                {transactions.length === 0 && <p className="text-sm text-muted-foreground">No transactions found</p>}
               </div>
-            ))}
-            {transactions.length === 0 && <p className="text-sm text-muted-foreground">No transactions found</p>}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Support */}
+        <TabsContent value="support">
+          <ClientSupportSection clientId={clientId} clientName={profile.full_name} />
+        </TabsContent>
+      </Tabs>
 
     </div>
   )

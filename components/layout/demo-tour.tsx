@@ -22,7 +22,7 @@ const TOUR_CONFIG: Config = {
       popover: {
         title: "Welcome 👋",
         description:
-          "This is an <b>AI copilot for bank relationship managers</b>. You're exploring it as <b>Peter Mwangi</b>, an RM at NCBA Bank with 27 demo clients — all data is fictional. Here's a 30-second tour.",
+          "This is <b>Atlas, an AI copilot for bank relationship managers</b>. You're exploring it as <b>Peter Mwangi</b>, an RM at NCBA Bank with 27 demo clients — all data is fictional. Here's a 30-second tour.",
       },
     },
     {

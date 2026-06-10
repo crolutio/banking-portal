@@ -7,7 +7,7 @@
  * Model split — by design:
  *
  *   claudeFast()    → Haiku 4.5. Used by latency-sensitive streaming routes
- *                     (RM Copilot chat, Draft Outreach). Anthropic positions
+ *                     (Atlas chat, Draft Outreach). Anthropic positions
  *                     Haiku 4.5 as a drop-in for Sonnet 4 — quality is more
  *                     than good enough for conversational synthesis and
  *                     channel/tone-shifted writing.
